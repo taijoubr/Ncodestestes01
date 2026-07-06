@@ -559,7 +559,7 @@ strong {
         transform: translate(-50%, -50%) scale(0.92);
     }
     to {
-        opacity: 0.45;
+        opacity: 0.18;
         transform: translate(-50%, -50%) scale(1);
     }
 }
