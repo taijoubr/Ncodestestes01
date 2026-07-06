@@ -26,10 +26,13 @@ app.add_middleware(
 # Mount static files (images, css, icons)
 # Ensure the static directory exists
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-os.makedirs(os.path.join(BASE_DIR, "static/css"), exist_ok=True)
-os.makedirs(os.path.join(BASE_DIR, "static/images"), exist_ok=True)
-os.makedirs(os.path.join(BASE_DIR, "static/icons"), exist_ok=True)
-os.makedirs(os.path.join(BASE_DIR, "static/fonts"), exist_ok=True)
+try:
+    os.makedirs(os.path.join(BASE_DIR, "static/css"), exist_ok=True)
+    os.makedirs(os.path.join(BASE_DIR, "static/images"), exist_ok=True)
+    os.makedirs(os.path.join(BASE_DIR, "static/icons"), exist_ok=True)
+    os.makedirs(os.path.join(BASE_DIR, "static/fonts"), exist_ok=True)
+except Exception as e:
+    print(f"Warning: Could not create static directories (read-only filesystem): {e}")
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
