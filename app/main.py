@@ -34,6 +34,22 @@ try:
 except Exception as e:
     print(f"Warning: Could not create static directories (read-only filesystem): {e}")
 
+from fastapi.responses import FileResponse
+
+@app.get("/static/images/logo.png")
+async def serve_logo_png():
+    path = os.path.join(BASE_DIR, "static/images/logo.png")
+    if os.path.exists(path):
+        try:
+            with open(path, "rb") as f:
+                head = f.read(100)
+            if b"<svg" in head or b"<?xml" in head:
+                return FileResponse(path, media_type="image/svg+xml")
+        except Exception:
+            pass
+        return FileResponse(path)
+    return FileResponse(path)
+
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
 # Include the main routing module
