@@ -1671,7 +1671,7 @@
                                 {% set p = payments_map[cell_key] %}
                                 {% if p.pago %}
                                     <!-- PAID CARD -->
-                                    <div onclick="openMensalidadeModal('{{ selected_membro.id }}', '{{ selected_membro.nome|escape }}', '{{ selected_year }}', '{{ mes_num }}', '{{ mes_nome }}', true, '{{ p.valor }}', '{{ p.data_pagamento }}', '{{ p.observacao|escape }}')"
+                                    <div onclick="openMensalidadeModal('{{ selected_membro.id }}', '{{ selected_membro.nome|escape }}', '{{ selected_year }}', '{{ mes_num }}', '{{ mes_nome }}', true, '{{ p.valor }}', '{{ p.data_pagamento }}', '{{ p.observacao|escape }}', {{ 'true' if p.isento else 'false' }})"
                                         class="bg-emerald-50/40 border border-emerald-200/80 hover:border-emerald-400 hover:bg-emerald-50/70 p-4 rounded-xl transition-all cursor-pointer flex flex-col justify-between h-[130px] shadow-sm group relative">
                                         <div class="flex justify-between items-start">
                                             <span class="text-sm font-bold text-slate-700 font-serif">{{ mes_nome }}</span>
@@ -1700,9 +1700,9 @@
                                     </div>
                                 {% else %}
                                     <!-- EXPLICITLY PENDING CARD -->
-                                    {% if selected_membro.isento_mensalidade %}
+                                    {% if selected_membro.isento_mensalidade or p.isento %}
                                     <!-- ISENTO CARD (EXPLICITLY RECORDED BUT UNPAID) -->
-                                    <div onclick="openMensalidadeModal('{{ selected_membro.id }}', '{{ selected_membro.nome|escape }}', '{{ selected_year }}', '{{ mes_num }}', '{{ mes_nome }}', false, '0.00', '', '')"
+                                    <div onclick="openMensalidadeModal('{{ selected_membro.id }}', '{{ selected_membro.nome|escape }}', '{{ selected_year }}', '{{ mes_num }}', '{{ mes_nome }}', false, '0.00', '', '{{ p.observacao|escape }}', true)"
                                         class="bg-blue-50/20 border border-blue-200/50 hover:border-blue-400 hover:bg-blue-50/50 p-4 rounded-xl transition-all cursor-pointer flex flex-col justify-between h-[130px] shadow-sm group">
                                         <div class="flex justify-between items-start">
                                             <span class="text-sm font-bold text-slate-700 font-serif">{{ mes_nome }}</span>
@@ -1714,15 +1714,15 @@
                                         
                                         <div class="mt-2">
                                             <span class="text-lg font-extrabold text-blue-600 font-mono">Isento</span>
-                                            <span class="text-[10px] text-slate-500 block mt-0.5">Clique para contribuição voluntária</span>
+                                            <span class="text-[10px] text-slate-500 block mt-0.5">{% if p.observacao %}Obs: {{ p.observacao }}{% else %}Isenção de mensalidade ativa{% endif %}</span>
                                         </div>
 
                                         <div class="text-[10px] text-slate-400 italic mt-1 border-t border-blue-100/30 pt-1.5">
-                                            Isenção de mensalidade ativa
+                                            Clique para ver/alterar
                                         </div>
                                     </div>
                                     {% else %}
-                                    <div onclick="openMensalidadeModal('{{ selected_membro.id }}', '{{ selected_membro.nome|escape }}', '{{ selected_year }}', '{{ mes_num }}', '{{ mes_nome }}', false, '{{ selected_membro.valor_mensalidade }}', '', '')"
+                                    <div onclick="openMensalidadeModal('{{ selected_membro.id }}', '{{ selected_membro.nome|escape }}', '{{ selected_year }}', '{{ mes_num }}', '{{ mes_nome }}', false, '{{ selected_membro.valor_mensalidade }}', '', '{{ p.observacao|escape }}', false)"
                                         class="bg-white border border-slate-200 hover:border-rose-300 hover:bg-rose-50/30 p-4 rounded-xl transition-all cursor-pointer flex flex-col justify-between h-[130px] shadow-sm group">
                                         <div class="flex justify-between items-start">
                                             <span class="text-sm font-bold text-slate-700 font-serif">{{ mes_nome }}</span>
@@ -1737,7 +1737,7 @@
                                         </div>
 
                                         <div class="text-[10px] text-slate-400 italic mt-1 border-t border-slate-100 pt-1.5">
-                                            Não há registros de pagamento
+                                            {% if p.observacao %}Obs: {{ p.observacao }}{% else %}Não há registros de pagamento{% endif %}
                                         </div>
                                     </div>
                                     {% endif %}
@@ -1746,7 +1746,7 @@
                                 <!-- DEFAULT PENDING CARD -->
                                 {% if selected_membro.isento_mensalidade %}
                                 <!-- ISENTO CARD (DEFAULT UNPAID) -->
-                                <div onclick="openMensalidadeModal('{{ selected_membro.id }}', '{{ selected_membro.nome|escape }}', '{{ selected_year }}', '{{ mes_num }}', '{{ mes_nome }}', false, '0.00', '', '')"
+                                <div onclick="openMensalidadeModal('{{ selected_membro.id }}', '{{ selected_membro.nome|escape }}', '{{ selected_year }}', '{{ mes_num }}', '{{ mes_nome }}', false, '0.00', '', '', true)"
                                     class="bg-blue-50/20 border border-blue-200/50 hover:border-blue-400 hover:bg-blue-50/50 p-4 rounded-xl transition-all cursor-pointer flex flex-col justify-between h-[130px] shadow-sm group">
                                     <div class="flex justify-between items-start">
                                         <span class="text-sm font-bold text-slate-700 font-serif">{{ mes_nome }}</span>
@@ -1758,15 +1758,15 @@
                                     
                                     <div class="mt-2">
                                         <span class="text-lg font-extrabold text-blue-600 font-mono">Isento</span>
-                                        <span class="text-[10px] text-slate-500 block mt-0.5">Clique para contribuição voluntária</span>
+                                        <span class="text-[10px] text-slate-500 block mt-0.5">Isenção de mensalidade ativa</span>
                                     </div>
 
                                     <div class="text-[10px] text-slate-400 italic mt-1 border-t border-blue-100/30 pt-1.5">
-                                        Isenção de mensalidade ativa
+                                        Isenção permanente ativa
                                     </div>
                                 </div>
                                 {% else %}
-                                <div onclick="openMensalidadeModal('{{ selected_membro.id }}', '{{ selected_membro.nome|escape }}', '{{ selected_year }}', '{{ mes_num }}', '{{ mes_nome }}', false, '{{ selected_membro.valor_mensalidade }}', '', '')"
+                                <div onclick="openMensalidadeModal('{{ selected_membro.id }}', '{{ selected_membro.nome|escape }}', '{{ selected_year }}', '{{ mes_num }}', '{{ mes_nome }}', false, '{{ selected_membro.valor_mensalidade }}', '', '', false)"
                                     class="bg-white border border-slate-200 hover:border-rose-300 hover:bg-rose-50/30 p-4 rounded-xl transition-all cursor-pointer flex flex-col justify-between h-[130px] shadow-sm group">
                                     <div class="flex justify-between items-start">
                                         <span class="text-sm font-bold text-slate-700 font-serif">{{ mes_nome }}</span>
@@ -2293,6 +2293,14 @@
                         </div>
                     </div>
 
+                    <div class="bg-blue-50/50 border border-blue-100 p-3 rounded-xl mt-2">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="isento" value="true" id="mensalidade-isento" onchange="toggleExemptFields(this.checked)" class="text-blue-600 focus:ring-blue-500 h-4 w-4 border-slate-300 rounded">
+                            <span class="ml-2 text-sm font-semibold text-slate-800">Membro Isento neste mês</span>
+                        </label>
+                        <p class="text-[11px] text-slate-500 mt-1 pl-6">Isenta o membro do pagamento de mensalidade do mês solicitado.</p>
+                    </div>
+
                     <!-- Payment Details (conditional) -->
                     <div id="payment-details-fields" class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
@@ -2374,7 +2382,7 @@
     </div>
 
     <script>
-        function openMensalidadeModal(membroId, membroNome, ano, mesNum, mesNome, pago, valor, dataPagamento, observacao) {
+        function openMensalidadeModal(membroId, membroNome, ano, mesNum, mesNome, pago, valor, dataPagamento, observacao, isento) {
             document.getElementById('mensalidade-membro-id').value = membroId;
             document.getElementById('mensalidade-ano').value = ano;
             document.getElementById('mensalidade-mes').value = mesNum;
@@ -2391,6 +2399,14 @@
                 document.getElementById('mensalidade-pago-sim').checked = false;
                 document.getElementById('mensalidade-pago-nao').checked = true;
                 togglePaymentFields(false);
+            }
+            
+            // Set exempt status
+            const isentoCheckbox = document.getElementById('mensalidade-isento');
+            if (isento === true || isento === 'true') {
+                isentoCheckbox.checked = true;
+            } else {
+                isentoCheckbox.checked = false;
             }
             
             // Set value
@@ -2422,6 +2438,19 @@
                 fields.classList.remove('hidden');
             } else {
                 fields.classList.add('hidden');
+            }
+        }
+
+        function toggleExemptFields(checked) {
+            const valorInput = document.getElementById('mensalidade-valor');
+            if (checked) {
+                if (valorInput.value === '50.00' || valorInput.value === '' || parseFloat(valorInput.value) > 0) {
+                    valorInput.value = '0.00';
+                }
+            } else {
+                if (valorInput.value === '0.00' || valorInput.value === '') {
+                    valorInput.value = '50.00';
+                }
             }
         }
 

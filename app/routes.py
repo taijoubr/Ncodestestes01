@@ -805,6 +805,7 @@ async def admin_dashboard(
             for p in payments:
                 payments_map[f"{p.membro_id}_{p.mes}"] = {
                     "pago": p.pago,
+                    "isento": p.isento,
                     "valor": p.valor,
                     "data_pagamento": p.data_pagamento.strftime("%Y-%m-%d") if p.data_pagamento else None,
                     "observacao": p.observacao or "",
@@ -946,6 +947,7 @@ async def mensalidades_save(
     ano: int = Form(...),
     mes: int = Form(...),
     pago: str = Form("false"),
+    isento: str = Form("false"),
     valor: float = Form(...),
     data_pagamento: str = Form(None),
     observacao: str = Form(None),
@@ -964,6 +966,7 @@ async def mensalidades_save(
     try:
         import datetime
         is_paid = (pago.lower() == "true")
+        is_exempt = (isento.lower() == "true")
         
         # Parse payment date
         p_date = None
@@ -987,6 +990,7 @@ async def mensalidades_save(
 
         if record:
             record.pago = is_paid
+            record.isento = is_exempt
             record.valor = valor
             record.data_pagamento = p_date if is_paid else None
             record.observacao = observacao.strip() if observacao else None
@@ -996,6 +1000,7 @@ async def mensalidades_save(
                 ano=ano,
                 mes=mes,
                 pago=is_paid,
+                isento=is_exempt,
                 valor=valor,
                 data_pagamento=p_date if is_paid else None,
                 observacao=observacao.strip() if observacao else None
@@ -1009,7 +1014,7 @@ async def mensalidades_save(
             TransacaoFinanceira.categoria == "Mensalidade"
         ).first()
 
-        if is_paid:
+        if is_paid and not is_exempt:
             if existing_tx:
                 existing_tx.valor = valor
                 existing_tx.data = p_date

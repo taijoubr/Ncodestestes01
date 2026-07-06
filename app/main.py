@@ -364,6 +364,19 @@ def on_startup():
         print("Connecting to Supabase and creating database tables if they do not exist...")
         Base.metadata.create_all(bind=engine)
         print("Database tables synchronized successfully!")
+        
+        # Run custom migration to add 'isento' column if it doesn't exist
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            try:
+                conn.execute(text("SELECT isento FROM mensalidades_pagamentos LIMIT 1"))
+            except Exception:
+                try:
+                    conn.execute(text("ALTER TABLE mensalidades_pagamentos ADD COLUMN isento BOOLEAN DEFAULT FALSE"))
+                    print("Added column 'isento' to 'mensalidades_pagamentos' successfully via migration!")
+                except Exception as alter_err:
+                    print(f"Could not add column isento: {alter_err}")
+
         seed_initial_data()
     except Exception as e:
         print(f"Warning: Could not create tables on remote database. Running in fallback mode. Details: {e}")

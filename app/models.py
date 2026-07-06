@@ -112,6 +112,7 @@ class MensalidadePagamento(Base):
     ano = Column(Integer, nullable=False)        # Ano de referência (ex: 2026)
     mes = Column(Integer, nullable=False)        # Mês de referência (1 a 12)
     pago = Column(Boolean, default=False)        # Status do pagamento
+    isento = Column(Boolean, default=False, nullable=False)
     valor = Column(Float, nullable=False, default=50.0) # Valor pago ou a pagar
     data_pagamento = Column(Date, nullable=True) # Data em que o pagamento foi realizado
     observacao = Column(String(200), nullable=True) # Observações adicionais
