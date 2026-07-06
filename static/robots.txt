@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Sitemap placeholder
+Sitemap: https://olorokebirigui.org/sitemap.xml

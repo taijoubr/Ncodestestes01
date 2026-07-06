@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Agendar Consultas e Atendimentos - Oloroke Birigui{% endblock %}
+
+{% block content %}
+<!-- Load Tailwind CSS inside this page to build an exceptional visual interface -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Custom Styles to ensure perfect alignment with base.html -->
+<style>
+    /* Avoid global conflicts, scope overrides safely */
+    .booking-card {
+        background-color: #0B1F3A;
+        border-color: #1E4D8C;
+    }
+    .text-serif {
+        font-family: 'Playfair Display', serif;
+    }
+    /* Restyle inputs to have high contrast */
+    .booking-input {
+        background-color: rgba(22, 52, 92, 0.4);
+        border: 1px solid #1E4D8C;
+        color: white;
+    }
+    .booking-input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    }
+</style>
+
+<!-- Header Section -->
+<section class="relative bg-[#050E1A] text-white py-12 px-6 overflow-hidden border-b border-[#1E4D8C]">
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(30,77,140,0.15),transparent_70%)]"></div>
+    <div class="max-w-4xl mx-auto text-center relative z-10">
+        <span class="text-xs uppercase tracking-widest font-bold text-blue-400 bg-blue-950/60 px-3.5 py-1.5 rounded-full border border-blue-800/40">Agendamento de Atendimentos</span>
+        <h1 class="text-3xl md:text-5xl font-bold leading-tight text-serif mt-4 text-white">Consultas e Trabalhos</h1>
+        <p class="text-slate-300 text-sm md:text-base mt-3 max-w-2xl mx-auto leading-relaxed">
+            Solicite o seu agendamento para consultas espirituais ou trabalhos de cura e assistência espiritual. 
+            <span class="text-amber-400 font-medium">Os trabalhos e consultas serão analisados por nossa equipe, e entraremos em contato com você para realizar a confirmação do seu agendamento de atendimento privado.</span>
+        </p>
+    </div>
+</section>
+
+<!-- Main Form / Content -->
+<section class="bg-[#050E1A] py-12 px-4 sm:px-6 lg:px-8 text-slate-100 min-h-[600px] relative">
+    <div class="max-w-4xl mx-auto">
+        
+        <!-- Alerts/Feedback -->
+        {% if error %}
+        <div class="mb-8 p-4 rounded-xl bg-red-950/50 border border-red-500/30 text-red-300 text-sm flex items-start gap-3">
+            <svg class="w-5 h-5 shrink-0 text-red-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div>
+                <span class="font-bold block text-white">Ops! Houve um problema:</span>
+                {{ error }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if success %}
+        <!-- Success Screen -->
+        <div class="bg-[#0B1F3A]/90 border border-[#1E4D8C] rounded-2xl p-8 text-center space-y-6 shadow-2xl relative z-10 max-w-2xl mx-auto">
+            <div class="inline-flex items-center justify-center p-4 bg-emerald-950/60 text-emerald-400 rounded-full border border-emerald-500/30">
+                <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            
+            <div class="space-y-2">
+                <h2 class="text-2xl md:text-3xl font-bold text-serif text-white">Solicitação de Agendamento Enviada!</h2>
+                <p class="text-slate-300 text-sm">Sua solicitação de agendamento foi registrada com sucesso.</p>
+            </div>
+
+            <!-- Detail Box -->
+            <div class="bg-[#0e274b] border border-blue-900 rounded-xl p-5 text-left space-y-3 font-sans">
+                <div class="flex justify-between items-center border-b border-blue-950 pb-2">
+                    <span class="text-xs text-slate-400 uppercase font-semibold">Consultante</span>
+                    <span class="text-sm font-bold text-white">{{ booking.nome_cliente }}</span>
+                </div>
+                <div class="flex justify-between items-center border-b border-blue-950 pb-2">
+                    <span class="text-xs text-slate-400 uppercase font-semibold">Dirigente / Autorizado</span>
+                    <span class="text-sm font-bold text-blue-300">{{ booking.leader_name }} ({{ booking.leader_cargo }})</span>
+                </div>
+                <div class="flex justify-between items-center border-b border-blue-950 pb-2">
+                    <span class="text-xs text-slate-400 uppercase font-semibold">Data Solicitada</span>
+                    <span class="text-sm font-bold text-white">{{ booking.data_formatada }}</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-slate-400 uppercase font-semibold">Horário</span>
+                    <span class="text-sm font-bold text-white">{{ booking.horario }}h</span>
+                </div>
+            </div>
+
+            <div class="text-xs text-slate-400 leading-relaxed text-center bg-blue-950/40 p-4 rounded-xl border border-blue-900/40">
+                <strong class="text-amber-400 block mb-1">Aguarde a Confirmação:</strong>
+                O seu agendamento foi recebido com status <strong class="text-yellow-400">Pendente</strong> e será analisado pela nossa secretaria e dirigentes. Entraremos em contato com você diretamente para realizar a confirmação ou reagendamento do seu atendimento privado.
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                <a href="/consultas" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-6 py-3 rounded-xl shadow-md transition-all text-center">
+                    Solicitar Outro Agendamento
+                </a>
+                <a href="/" class="bg-transparent border border-blue-800 hover:bg-blue-950/50 text-slate-300 text-xs font-bold px-6 py-3 rounded-xl transition-all text-center">
+                    Voltar para o Início
+                </a>
+            </div>
+        </div>
+        {% else %}
+
+        <!-- Scheduling Form Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Left Info Panel -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-[#0B1F3A]/60 border border-[#1E4D8C]/50 rounded-2xl p-6 space-y-4">
+                    <h3 class="text-lg font-bold text-serif text-blue-400">Instruções Importantes</h3>
+                    <ul class="space-y-3 text-xs text-slate-300 leading-relaxed">
+                        <li class="flex items-start gap-2.5">
+                            <span class="p-1 bg-blue-950 text-blue-400 rounded-lg shrink-0 mt-0.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            </span>
+                            <span><strong>Contato para Confirmação:</strong> Após realizar a sua solicitação, nossa equipe entrará em contato diretamente com você para realizar a confirmação do agendamento de seu atendimento privado.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <span class="p-1 bg-blue-950 text-blue-400 rounded-lg shrink-0 mt-0.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            </span>
+                            <span><strong>Respeito Doutrinário:</strong> Solicitamos o uso de roupas claras (evitar roupas pretas, decotadas ou curtas) em respeito ao ambiente consagrado do terreiro.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <span class="p-1 bg-blue-950 text-blue-400 rounded-lg shrink-0 mt-0.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            </span>
+                            <span><strong>Sigilo Espiritual:</strong> O atendimento individual garante privacidade e sigilo absoluto sobre suas questões de vida e desabafos espirituais.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="bg-gradient-to-br from-blue-950/20 to-indigo-950/30 border border-blue-900/30 rounded-2xl p-5 text-center">
+                    <p class="text-xs text-slate-400">Dúvidas ou cancelamentos?</p>
+                    <p class="text-sm font-semibold text-blue-400 mt-1">contato@olorokebirigui.org</p>
+                </div>
+            </div>
+
+            <!-- Form Container -->
+            <form action="/consultas" method="POST" class="lg:col-span-2 bg-[#0B1F3A]/80 border border-[#1E4D8C] rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl relative z-10">
+                <h2 class="text-xl font-bold text-serif border-b border-blue-900 pb-3 text-white">Preencha seus dados de agendamento</h2>
+                
+                <!-- Hidden input for booking type defaulting to 'Consulta' -->
+                <input type="hidden" name="tipo" value="Consulta">
+
+                <!-- 1. Select authorized leader/medium -->
+                <div>
+                    <label for="membro_id" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">1. Dirigente ou Médium de Preferência</label>
+                    <select id="membro_id" name="membro_id" required 
+                        class="w-full bg-[#16345c]/50 border border-[#1E4D8C] rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-medium cursor-pointer">
+                        {% for m in authorized_leaders %}
+                        <option value="{{ m.id }}" {% if form_data and form_data.membro_id == m.id %}selected{% endif %}>
+                            {{ m.nome }} ({{ m.cargo }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- 2. Date and Time slots -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="data" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">2. Data Desejada</label>
+                        <input type="date" id="data" name="data" required min="{{ min_date }}" value="{{ form_data.data if form_data else '' }}"
+                            class="w-full bg-[#16345c]/50 border border-[#1E4D8C] rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-medium cursor-pointer">
+                    </div>
+                    <div>
+                        <label for="horario" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">3. Horário de Preferência</label>
+                        <select id="horario" name="horario" required
+                            class="w-full bg-[#16345c]/50 border border-[#1E4D8C] rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-medium cursor-pointer">
+                            <option value="">Selecione um horário</option>
+                            {% for slot in time_slots %}
+                            <option value="{{ slot }}" {% if form_data and form_data.horario == slot %}selected{% endif %}>{{ slot }}h</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 3. Client details -->
+                <div class="space-y-4">
+                    <h3 class="text-xs font-bold text-blue-400 uppercase tracking-wider mt-4">4. Suas Informações Pessoais</h3>
+                    
+                    <div>
+                        <label for="nome_cliente" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Nome Completo</label>
+                        <input type="text" id="nome_cliente" name="nome_cliente" required value="{{ form_data.nome_cliente if form_data else '' }}" placeholder="Ex: Maria Oliveira de Souza" 
+                            class="w-full bg-[#16345c]/50 border border-[#1E4D8C] rounded-xl px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-medium">
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="telefone_cliente" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Telefone (com DDD)</label>
+                            <input type="text" id="telefone_cliente" name="telefone_cliente" required value="{{ form_data.telefone_cliente if form_data else '' }}" placeholder="Ex: (11) 99999-1234" 
+                                class="w-full bg-[#16345c]/50 border border-[#1E4D8C] rounded-xl px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-medium">
+                        </div>
+                        <div>
+                            <label for="email_cliente" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">E-mail (opcional)</label>
+                            <input type="email" id="email_cliente" name="email_cliente" value="{{ form_data.email_cliente if form_data else '' }}" placeholder="Ex: consultante@email.com" 
+                                class="w-full bg-[#16345c]/50 border border-[#1E4D8C] rounded-xl px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-medium">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="observacoes" class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Observações / Motivo Espiritual (opcional)</label>
+                        <textarea id="observacoes" name="observacoes" rows="3" placeholder="Se desejar, informe brevemente o motivo do pedido de consulta ou trabalho (ex: passes de cura, aconselhamento familiar, proteção espiritual, desobsessão, etc.)" 
+                            class="w-full bg-[#16345c]/50 border border-[#1E4D8C] rounded-xl px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-medium resize-none">{{ form_data.observacoes if form_data else '' }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all hover:-translate-y-0.5 active:translate-y-0 flex justify-center items-center gap-2 cursor-pointer mt-4 text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    Solicitar Agendamento de Consulta / Trabalho
+                </button>
+            </form>
+
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}

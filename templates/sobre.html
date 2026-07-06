@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}A Casa - Oloroke Birigui{% endblock %}
+
+{% block content %}
+<!-- Subpage Header -->
+<section id="sobre-header" class="page-header">
+    <div class="page-header-container">
+        <span class="page-tag">Nossa Casa</span>
+        <h1 class="page-title">História e Doutrina</h1>
+        <p class="page-subtitle">Saiba mais sobre a nossa jornada espiritual, nossos fundamentos e o amparo sagrado do Oloroke Birigui.</p>
+    </div>
+</section>
+
+<!-- Detailed History Section -->
+<section id="historia-detalhes" class="section bg-white">
+    <div class="container">
+        <div class="split-layout" id="history-layout">
+            <!-- Story Content -->
+            <div class="split-col-left" id="history-text">
+                <span class="section-tag">Fundação</span>
+                <h2 class="section-title">Nossa História</h2>
+                <div class="divider-left"></div>
+                <p class="body-text">
+                    O <strong>Oloroke Birigui</strong> nasceu no ano de 2018, impulsionado pelo desejo ardente de fazer a caridade incondicional e pela orientação direta do plano espiritual. Fundado por uma pequena corrente de médiuns dedicados, a casa iniciou suas atividades em um modesto galpão, unida pela fé e pelo desejo de acolher os mais necessitados de amparo espiritual.
+                </p>
+                <p class="body-text">
+                    Sob a liderança espiritual e a firmeza protetora do sagrado, a casa expandiu-se gradativamente. Ao longo dos anos, o terreiro consolidou-se como um referencial de seriedade doutrinária, integrando novos médiuns em seu corpo de trabalho e estabelecendo uma rotina rigorosa de estudos, assistência social e giras públicas.
+                </p>
+                <p class="body-text">
+                    Nossa prática religiosa baseia-se no culto às Divindades Orixás, na Umbanda e nas tradições do Candomblé, na lei de causa e efeito, na reencarnação e na evolução contínua da alma. Temos muito orgulho de manter um ambiente harmonioso, acolhedor e focado exclusivamente na prática do bem.
+                </p>
+            </div>
+
+            <!-- Spiritual Patron Quote / Portrait Sidebar -->
+            <div class="split-col-right" id="patron-sidebar">
+                <div class="patron-card">
+                    <div class="patron-image-placeholder">
+                        <!-- Pure CSS Elegant Geometric Shield representing the Patron -->
+                        <svg class="patron-shield" viewBox="0 0 100 100" width="80" height="80">
+                            <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="none" stroke="#1E4D8C" stroke-width="3" />
+                            <circle cx="50" cy="50" r="25" fill="#0B1F3A" />
+                            <!-- Bow and Arrow icon inside shield -->
+                            <path d="M 35 50 C 35 30 65 30 65 50 C 65 70 35 70 35 50 M 35 50 L 60 50" fill="none" stroke="#FFFFFF" stroke-width="2" />
+                            <polygon points="60,50 53,47 53,53" fill="#FFFFFF" />
+                        </svg>
+                    </div>
+                    <div class="patron-info">
+                        <blockquote>
+                            "A caridade não escolhe dia, hora ou pessoa. Ela é o amor de Deus em movimento através das mãos dos homens."
+                        </blockquote>
+                        <cite>&mdash; Oloroke Birigui</cite>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Values & Spiritual Principles Grid -->
+<section id="principios-doutrina" class="section bg-light">
+    <div class="container">
+        <div class="section-header text-center">
+            <span class="section-tag">Fundamentos Teológicos</span>
+            <h2 class="section-title">Nossos Princípios Espirituais</h2>
+            <div class="divider"></div>
+            <p class="section-subtitle">O terreiro segue diretrizes claras que asseguram a idoneidade, seriedade e pureza de nossos trabalhos.</p>
+        </div>
+
+        <div class="grid-3" id="principios-grid">
+            <div class="principle-item">
+                <div class="principle-number">01</div>
+                <h4>Caridade Integral</h4>
+                <p>Nenhuma quantia em dinheiro, presente ou permuta é aceita em troca de trabalhos espirituais. A cura e o conselho são dons divinos que devem ser doados gratuitamente, sem exceções.</p>
+            </div>
+            
+            <div class="principle-item">
+                <div class="principle-number">02</div>
+                <h4>Amparo Social</h4>
+                <p>Nossa fé manifesta-se em ações concretas. Coordenamos campanhas regulares de doação de mantimentos, roupas, brinquedos e produtos de higiene pessoal para asilos, creches e comunidades em risco.</p>
+            </div>
+
+            <div class="principle-item">
+                <div class="principle-number">03</div>
+                <h4>Sintonia com a Natureza</h4>
+                <p>Os Orixás são as próprias forças e mistérios da criação divina manifestadas na natureza (as matas, os rios, o mar, as pedreiras). Cuidamos e respeitamos o meio ambiente como nosso templo vivo.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Guidelines for Visitors (Highly Practical UI) -->
+<section id="guia-visitante" class="section bg-white">
+    <div class="container-narrow">
+        <div class="section-header text-center">
+            <span class="section-tag">Primeira Vez?</span>
+            <h2 class="section-title">Orientações para os Visitantes</h2>
+            <div class="divider"></div>
+            <p class="section-subtitle">Preparamos estas orientações para que sua vinda à nossa casa seja confortável, respeitosa e repleta de boas energias.</p>
+        </div>
+
+        <div class="accordion-list">
+            <!-- Card 1 -->
+            <div class="guideline-card" id="guideline-1">
+                <div class="guideline-header">
+                    <span class="guideline-badge">Vesting</span>
+                    <h4>Como devo me vestir?</h4>
+                </div>
+                <div class="guideline-body">
+                    <p>Recomenda-se o uso de <strong>roupas claras, discretas e confortáveis</strong>. Evite roupas pretas, decotes, bermudas curtas, saias curtas ou camisas sem manga. A simplicidade nas vestes ajuda a manter a harmonia energética e o respeito ao ambiente sagrado.</p>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="guideline-card" id="guideline-2">
+                <div class="guideline-header">
+                    <span class="guideline-badge">Time</span>
+                    <h4>Qual o horário de chegada?</h4>
+                </div>
+                <div class="guideline-body">
+                    <p>Os portões abrem exatamente 1 hora antes do início anunciado da Gira. As senhas para atendimento individual (passes e consultas) são distribuídas por ordem de chegada e de forma presencial. Procure chegar com antecedência.</p>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="guideline-card" id="guideline-3">
+                <div class="guideline-header">
+                    <span class="guideline-badge">Conduct</span>
+                    <h4>Como devo me comportar durante a Gira?</h4>
+                </div>
+                <div class="guideline-body">
+                    <p>Ao entrar no salão (assistência), procure manter silêncio, elevando seus pensamentos em oração ou reflexão positiva. Celulares devem ser mantidos no modo silencioso. É estritamente proibido filmar ou fotografar os médiuns e os trabalhos para preservar a privacidade e a concentração de todos.</p>
+                </div>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="guideline-card" id="guideline-4">
+                <div class="guideline-header">
+                    <span class="guideline-badge">Children</span>
+                    <h4>Crianças podem participar?</h4>
+                </div>
+                <div class="guideline-body">
+                    <p>Sim, todas as crianças são muito bem-vindas em nosso terreiro e também podem receber os passes dos guias. Pedimos apenas aos pais que zelem para que os pequenos permaneçam próximos, mantendo o silêncio necessário para a corrente de trabalho.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
