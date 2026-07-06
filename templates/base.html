@@ -18,7 +18,7 @@
     <meta property="og:url" content="{{ request.url }}">
     <meta property="og:title" content="{% block og_title %}Oloroke Birigui{% endblock %}">
     <meta property="og:description" content="{% block og_description %}Casa de fé e caridade fundada no axé, amor, respeito e na evolução espiritual. Conheça nossa história, trabalhos e agenda.{% endblock %}">
-    <meta property="og:image" content="/static/images/logo-og.jpg">
+    <meta property="og:image" content="/static/images/logo.png">
 
     <!-- Google Fonts for Elegant Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -51,9 +51,7 @@
         <div class="header-container">
             <!-- Logo / Brand -->
             <a href="/" class="brand-logo" id="logo-link">
-                {% if file_exists('static/images/logo.png') %}
-                    <img src="/static/images/logo.png" alt="Logo Oloroke Birigui" class="logo-icon" style="height: 42px; width: 42px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--accent);" />
-                {% endif %}
+                <img src="/static/images/logo.png" alt="Logo Oloroke Birigui" class="logo-icon" style="height: 42px; width: 42px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--accent);" />
                 <div class="brand-text">
                     <span class="brand-title">Oloroke Birigui</span>
                     <span class="brand-subtitle">Terreiro de Axé</span>
