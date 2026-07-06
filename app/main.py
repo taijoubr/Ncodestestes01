@@ -25,12 +25,13 @@ app.add_middleware(
 
 # Mount static files (images, css, icons)
 # Ensure the static directory exists
-os.makedirs("static/css", exist_ok=True)
-os.makedirs("static/images", exist_ok=True)
-os.makedirs("static/icons", exist_ok=True)
-os.makedirs("static/fonts", exist_ok=True)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.makedirs(os.path.join(BASE_DIR, "static/css"), exist_ok=True)
+os.makedirs(os.path.join(BASE_DIR, "static/images"), exist_ok=True)
+os.makedirs(os.path.join(BASE_DIR, "static/icons"), exist_ok=True)
+os.makedirs(os.path.join(BASE_DIR, "static/fonts"), exist_ok=True)
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
 # Include the main routing module
 app.include_router(router)

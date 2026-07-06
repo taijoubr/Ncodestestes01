@@ -12,7 +12,8 @@ from app.models import AgendaEvent, Aviso, QuadroAviso, Membro, ConsultaPrivada,
 router = APIRouter()
 
 # Setup templates directory (located in the project root /templates)
-templates = Jinja2Templates(directory="templates")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 # Custom template filters for Portuguese date formatting
 PT_MONTHS = {
