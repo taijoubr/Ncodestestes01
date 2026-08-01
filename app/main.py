@@ -52,8 +52,13 @@ def set_global_logo_cache(raw_bytes: bytes, mime_type: str):
         os.makedirs(static_dir, exist_ok=True)
         with open(os.path.join(static_dir, "logo.png"), "wb") as f:
             f.write(raw_bytes)
-    except Exception:
-        pass
+        import base64
+        import json
+        b64_str = base64.b64encode(raw_bytes).decode("utf-8")
+        with open(os.path.join(static_dir, "logo_b64.json"), "w") as f:
+            json.dump({"b64": b64_str, "mime": mime_type}, f)
+    except Exception as ex:
+        print(f"Notice saving logo file: {ex}")
 
 def get_logo_bytes():
     global GLOBAL_LOGO_CACHE
@@ -71,6 +76,22 @@ def get_logo_bytes():
                 return raw_bytes, mime_type
         except Exception:
             pass
+
+    # Check local static/images/logo_b64.json file backup
+    try:
+        json_path = os.path.join(BASE_DIR, "static/images/logo_b64.json")
+        if os.path.exists(json_path):
+            import json
+            import base64
+            with open(json_path, "r") as f:
+                data = json.load(f)
+            if data and "b64" in data:
+                raw_bytes = base64.b64decode(data["b64"])
+                mime_type = data.get("mime", "image/png")
+                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": mime_type}
+                return raw_bytes, mime_type
+    except Exception as ex:
+        print(f"Error reading logo_b64.json: {ex}")
 
     # Check SQLite database
     try:

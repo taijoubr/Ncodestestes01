@@ -1919,7 +1919,6 @@ async def admin_user_update(
 @router.post("/admin/config/logo")
 async def admin_config_logo(
     request: Request,
-    logo: UploadFile = File(None),
     db: Session = Depends(get_db)
 ):
     user_id = get_session_user_id(request)
@@ -1934,12 +1933,8 @@ async def admin_config_logo(
             request.session["msg_error"] = "Você não tem permissão para alterar as configurações do terreiro."
             return RedirectResponse(url="/admin?tab=configuracoes", status_code=303)
             
-        logo_file = logo
-        if not logo_file or not hasattr(logo_file, "filename") or not logo_file.filename:
-            form = await request.form()
-            f = form.get("logo")
-            if f and hasattr(f, "filename") and f.filename:
-                logo_file = f
+        form = await request.form()
+        logo_file = form.get("logo")
 
         if not logo_file or not hasattr(logo_file, "filename") or not logo_file.filename:
             request.session["msg_error"] = "Nenhum arquivo enviado ou arquivo inválido. Por favor selecione uma imagem."
@@ -1957,7 +1952,7 @@ async def admin_config_logo(
         import base64
         b64_str = base64.b64encode(data).decode("utf-8")
 
-        # 1. Update in-memory cache & /tmp/logo.png & static/images/logo.png
+        # 1. Save to in-memory cache, /tmp/logo.png, static/images/logo.png and custom_logo.b64
         try:
             from app.main import set_global_logo_cache
             set_global_logo_cache(data, mime_type)
@@ -1997,8 +1992,9 @@ async def admin_config_logo(
 
         request.session["msg_success"] = "Logotipo do terreiro atualizado com sucesso!"
     except Exception as e:
+        print(f"Error in admin_config_logo: {e}")
         request.session["msg_error"] = f"Erro ao atualizar o logotipo: {e}"
-        
+
     return RedirectResponse(url="/admin?tab=configuracoes", status_code=303)
 
 
