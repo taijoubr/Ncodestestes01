@@ -1264,6 +1264,168 @@ async def membros_delete(
     return RedirectResponse(url="/admin?tab=membros", status_code=303)
 
 
+@router.get("/admin/membros/export-excel")
+async def export_membros_excel(
+    request: Request,
+    membro_id: int = None,
+    db: Session = Depends(get_db)
+):
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return RedirectResponse(url="/admin/login", status_code=303)
+        
+    from app.models import User, Membro
+    current_user = db.query(User).filter(User.id == user_id).first()
+    if not current_user or current_user.role not in ["programador", "pai_de_santo", "secretario", "tesoureiro", "membro"]:
+        request.session["msg_error"] = "Acesso negado para exportar relatórios de membros."
+        return RedirectResponse(url="/admin?tab=membros", status_code=303)
+
+    # If role is 'membro', limit export to their own profile
+    if current_user.role == "membro":
+        m_rec = db.query(Membro).filter(Membro.email == current_user.email).first()
+        if m_rec:
+            membro_id = m_rec.id
+        else:
+            request.session["msg_error"] = "Sua conta de membro não possui cadastro de ficha associado."
+            return RedirectResponse(url="/admin?tab=membros", status_code=303)
+
+    import io
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from fastapi.responses import Response
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Ficha de Membros"
+
+    # Header styling
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="0B1F3A", end_color="0B1F3A", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    # Title banner
+    ws.merge_cells("A1:K1")
+    title_cell = ws["A1"]
+    title_cell.value = "FICHA DE CADASTRO DE MEMBROS - TERREIRO OLOROKE BIRIGUI"
+    title_cell.font = Font(name="Calibri", size=13, bold=True, color="FFFFFF")
+    title_cell.fill = PatternFill(start_color="1E4D8C", end_color="1E4D8C", fill_type="solid")
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 32
+
+    # Subtitle / info
+    ws.merge_cells("A2:K2")
+    sub_cell = ws["A2"]
+    sub_cell.value = f"Relatório extraído em: {datetime.datetime.now().strftime('%d/%m/%Y às %H:%M')}"
+    sub_cell.font = Font(name="Calibri", size=9, italic=True, color="555555")
+    sub_cell.alignment = Alignment(horizontal="right", vertical="center")
+    ws.row_dimensions[2].height = 18
+
+    headers = [
+        "ID",
+        "Nome Completo",
+        "Cargo / Função",
+        "Telefone / Celular",
+        "E-mail",
+        "Data de Ingresso",
+        "Status na Corrente",
+        "Isenção de Mensalidade",
+        "Mensalidade Padrão (R$)",
+        "Consulta Privada",
+        "Observações / Anotações"
+    ]
+
+    ws.append([]) # row 3 blank
+    ws.append(headers) # row 4
+    ws.row_dimensions[4].height = 26
+
+    thin_border = Border(
+        left=Side(style='thin', color='CCCCCC'),
+        right=Side(style='thin', color='CCCCCC'),
+        top=Side(style='thin', color='CCCCCC'),
+        bottom=Side(style='thin', color='CCCCCC')
+    )
+
+    for col_num, header_title in enumerate(headers, 1):
+        cell = ws.cell(row=4, column=col_num)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = thin_border
+
+    query = db.query(Membro)
+    if membro_id:
+        membros = query.filter(Membro.id == membro_id).all()
+        filename_part = f"membro_{membro_id}"
+    else:
+        membros = query.order_by(Membro.nome.asc()).all()
+        filename_part = "todos"
+
+    center_align = Alignment(horizontal="center", vertical="center")
+    left_align = Alignment(horizontal="left", vertical="center")
+
+    for row_idx, m in enumerate(membros, start=5):
+        ws.row_dimensions[row_idx].height = 22
+        
+        data_ing = m.data_ingresso.strftime("%d/%m/%Y") if m.data_ingresso else "-"
+        status_str = "Ativo na Corrente" if m.ativo else "Afastado / Inativo"
+        isento_str = "Sim" if m.isento_mensalidade else "Não"
+        consulta_str = "Habilitado" if m.aprovado_consulta_privada else "Não Habilitado"
+        valor_mensal = m.valor_mensalidade if m.valor_mensalidade is not None else 50.0
+
+        row_data = [
+            m.id,
+            m.nome,
+            m.cargo,
+            m.telefone or "-",
+            m.email or "-",
+            data_ing,
+            status_str,
+            isento_str,
+            valor_mensal,
+            consulta_str,
+            m.observacoes or "-"
+        ]
+
+        for col_idx, val in enumerate(row_data, 1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=val)
+            cell.border = thin_border
+            if col_idx in [1, 6, 7, 8, 10]:
+                cell.alignment = center_align
+            else:
+                cell.alignment = left_align
+            
+            if col_idx == 9:
+                cell.number_format = 'R$ #,##0.00'
+                cell.alignment = center_align
+
+    # Column width auto-fit
+    for col in ws.columns:
+        max_len = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            if cell.row in [1, 2]:
+                continue
+            val_str = str(cell.value or '')
+            if len(val_str) > max_len:
+                max_len = len(val_str)
+        ws.column_dimensions[col_letter].width = max(max_len + 5, 12)
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f"ficha_membros_{filename_part}_{datetime.date.today().strftime('%Y%m%d')}.xlsx"
+
+    return Response(
+        content=output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{filename}\""
+        }
+    )
+
+
 # --------------------------------------------------------------------------
 # C. SITE CONTENT CONTROLLERS (AVISOS & AGENDA)
 # --------------------------------------------------------------------------

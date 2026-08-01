@@ -19,6 +19,23 @@
         h1, h2, h3 {
             font-family: 'Playfair Display', serif;
         }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #membro-ficha-modal, #membro-ficha-modal * {
+                visibility: visible;
+            }
+            #membro-ficha-modal {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+                box-shadow: none !important;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -636,7 +653,13 @@
                 <!-- Members List -->
                 <div class="{% if current_user and current_user.role in ['programador', 'pai_de_santo'] %}lg:col-span-2{% else %}lg:col-span-3{% endif %} bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                     <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <h3 class="font-bold text-slate-700 text-base">Membros Cadastrados</h3>
+                        <div class="flex items-center gap-3">
+                            <h3 class="font-bold text-slate-700 text-base">Membros Cadastrados</h3>
+                            <a href="/admin/membros/export-excel" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg inline-flex items-center gap-1.5 shadow-xs transition-all" title="Baixar todas as fichas de membros no formato de planilha do Excel (.xlsx)">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                Exportar Excel
+                            </a>
+                        </div>
                         
                         <!-- Mini filter form -->
                         <form method="GET" action="/admin" class="flex gap-2 w-full sm:w-auto">
@@ -664,6 +687,7 @@
                                     <th class="px-6 py-3 text-center">Status</th>
                                     <th class="px-6 py-3 text-center">Consulta Privada</th>
                                     <th class="px-6 py-3 text-center">Mensalidade</th>
+                                    <th class="px-6 py-3 text-center">Ficha / Excel</th>
                                     {% if current_user and current_user.role in ['programador', 'pai_de_santo'] %}
                                     <th class="px-6 py-3 text-center">Ações</th>
                                     {% endif %}
@@ -735,6 +759,26 @@
                                                     <span class="text-[10px] text-slate-500 font-semibold">Regular</span>
                                                 {% endif %}
                                             {% endif %}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                                            <div class="flex items-center justify-center gap-1.5">
+                                                <!-- View & Print Ficha Modal Trigger -->
+                                                <button type="button" 
+                                                    onclick="openFichaModal({{ m.id }}, '{{ m.nome | escape }}', '{{ m.cargo | escape }}', '{{ m.telefone or '' }}', '{{ m.email or '' }}', '{{ m.data_ingresso | format_date }}', {{ 'true' if m.ativo else 'false' }}, {{ 'true' if m.isento_mensalidade else 'false' }}, {{ 'true' if m.aprovado_consulta_privada else 'false' }}, '{{ (m.observacoes or '') | replace('\n', ' ') | escape }}')"
+                                                    class="text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md border border-blue-200 transition-all inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                                                    title="Visualizar / Imprimir Ficha de {{ m.nome }}">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                                    Ficha
+                                                </button>
+
+                                                <!-- Export Excel button for this member -->
+                                                <a href="/admin/membros/export-excel?membro_id={{ m.id }}" 
+                                                    class="text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded-md border border-emerald-200 transition-all inline-flex items-center gap-1 text-xs font-semibold"
+                                                    title="Baixar Planilha Excel de {{ m.nome }}">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                                    Excel
+                                                </a>
+                                            </div>
                                         </td>
                                         {% if current_user and current_user.role in ['programador', 'pai_de_santo'] %}
                                         <td class="px-6 py-4 whitespace-nowrap text-center">
@@ -2520,7 +2564,122 @@
             document.getElementById('edit-user-modal').classList.add('hidden');
             document.body.style.overflow = '';
         }
+
+        function openFichaModal(id, nome, cargo, telefone, email, ingresso, ativo, isento, consulta, obs) {
+            document.getElementById('ficha-nome').textContent = nome || '-';
+            document.getElementById('ficha-cargo').textContent = cargo || '-';
+            document.getElementById('ficha-telefone').textContent = telefone || '-';
+            document.getElementById('ficha-email').textContent = email || '-';
+            document.getElementById('ficha-ingresso').textContent = ingresso || '-';
+            
+            const statusEl = document.getElementById('ficha-status');
+            if (ativo) {
+                statusEl.textContent = '● Ativo na Corrente';
+                statusEl.className = 'text-sm font-bold text-emerald-600';
+            } else {
+                statusEl.textContent = '○ Inativo / Afastado';
+                statusEl.className = 'text-sm font-bold text-slate-500';
+            }
+
+            document.getElementById('ficha-isento').textContent = isento ? 'Isento(a) de mensalidade' : 'Mensalidade Regular';
+            document.getElementById('ficha-consulta').textContent = consulta ? 'Habilitado(a) para Consulta Privada' : 'Não Habilitado';
+            document.getElementById('ficha-observacoes').textContent = obs || 'Nenhuma observação registrada.';
+            
+            document.getElementById('ficha-excel-btn').href = '/admin/membros/export-excel?membro_id=' + id;
+
+            document.getElementById('membro-ficha-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeFichaModal() {
+            document.getElementById('membro-ficha-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
     </script>
+
+    <!-- Modal Ficha de Cadastro do Membro -->
+    <div id="membro-ficha-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
+            <!-- Header printable -->
+            <div class="bg-gradient-to-r from-[#0B1F3A] to-[#1E4D8C] text-white p-6 relative">
+                <button type="button" onclick="closeFichaModal()" class="absolute top-4 right-4 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-full p-2 transition-all print:hidden">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+                <div class="flex items-center gap-3">
+                    <div class="p-3 bg-amber-500/20 text-amber-300 rounded-2xl border border-amber-400/30">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold tracking-widest text-amber-400 block">Terreiro Oloroke Birigui</span>
+                        <h3 class="text-xl font-bold font-serif text-white">Ficha de Cadastro do Membro</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Printable Card Content -->
+            <div id="ficha-printable-content" class="p-6 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Nome Completo</span>
+                        <p id="ficha-nome" class="font-bold text-slate-800 text-base md:text-lg"></p>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Cargo / Função</span>
+                        <p id="ficha-cargo" class="font-semibold text-blue-700 text-sm md:text-base"></p>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Telefone / WhatsApp</span>
+                        <p id="ficha-telefone" class="text-slate-700 text-sm font-mono"></p>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">E-mail</span>
+                        <p id="ficha-email" class="text-slate-700 text-sm font-mono"></p>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Data de Ingresso</span>
+                        <p id="ficha-ingresso" class="text-slate-700 text-sm font-medium"></p>
+                    </div>
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Status na Corrente</span>
+                        <p id="ficha-status" class="text-sm font-bold"></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 rounded-2xl border border-slate-200 bg-white">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider mb-1">Situação de Mensalidade</span>
+                        <p id="ficha-isento" class="text-sm font-semibold text-slate-700"></p>
+                    </div>
+                    <div class="p-4 rounded-2xl border border-slate-200 bg-white">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider mb-1">Atendimento Privado</span>
+                        <p id="ficha-consulta" class="text-sm font-semibold text-slate-700"></p>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider mb-1">Observações / Anotações Internas</span>
+                    <p id="ficha-observacoes" class="text-xs text-slate-600 leading-relaxed italic whitespace-pre-wrap"></p>
+                </div>
+            </div>
+
+            <!-- Footer buttons -->
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3 print:hidden">
+                <a id="ficha-excel-btn" href="#" class="w-full sm:w-auto bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs px-4 py-2.5 rounded-xl inline-flex items-center justify-center gap-2 transition-all shadow-xs">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Baixar Ficha em Planilha Excel (.xlsx)
+                </a>
+                <div class="flex gap-2 w-full sm:w-auto justify-end">
+                    <button type="button" onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2.5 rounded-xl inline-flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                        Imprimir Ficha (PDF/Papel)
+                    </button>
+                    <button type="button" onclick="closeFichaModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>

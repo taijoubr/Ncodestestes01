@@ -34,19 +34,45 @@
         <div class="bg-[#0B1F3A] border border-[#1E4D8C] rounded-2xl shadow-2xl p-8">
             <h2 class="text-xl text-white font-semibold mb-6 text-center border-b border-slate-800 pb-4">Entrar no Sistema</h2>
 
+            <!-- Quick Credentials Helper Box -->
+            <div class="mb-5 p-4 rounded-xl bg-slate-900/80 border border-slate-700/80 text-xs text-slate-300 space-y-2">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span class="font-bold text-amber-400 uppercase tracking-wider text-[10px]">Contas de Acesso Cadastradas:</span>
+                    <span class="text-[10px] text-slate-400">Clique para preencher</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <button type="button" onclick="fillCredentials('programador', 'taijou123')" class="p-2 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-left border border-slate-700 transition-all cursor-pointer">
+                        <div class="font-bold text-white text-xs">Programador</div>
+                        <div class="text-[10px] text-slate-400 font-mono">programador / taijou123</div>
+                    </button>
+                    <button type="button" onclick="fillCredentials('Ricardo', 'Ricardo123')" class="p-2 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-left border border-slate-700 transition-all cursor-pointer">
+                        <div class="font-bold text-blue-300 text-xs">Pai de Santo</div>
+                        <div class="text-[10px] text-slate-400 font-mono">Ricardo / Ricardo123</div>
+                    </button>
+                    <button type="button" onclick="fillCredentials('Aline', 'aline123')" class="p-2 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-left border border-slate-700 transition-all cursor-pointer">
+                        <div class="font-bold text-emerald-300 text-xs">Tesoureira</div>
+                        <div class="text-[10px] text-slate-400 font-mono">Aline / aline123</div>
+                    </button>
+                    <button type="button" onclick="fillCredentials('membro', 'membro123')" class="p-2 bg-slate-800/80 hover:bg-slate-700 rounded-lg text-left border border-slate-700 transition-all cursor-pointer">
+                        <div class="font-bold text-sky-300 text-xs">Membro</div>
+                        <div class="text-[10px] text-slate-400 font-mono">membro / membro123</div>
+                    </button>
+                </div>
+            </div>
+
             <!-- Iframe Warning and New Tab Link -->
-            <div id="iframe-warning" class="hidden mb-5 p-4 rounded-xl bg-blue-950/40 border border-blue-500/30 text-slate-300 text-xs leading-relaxed">
+            <div id="iframe-warning" class="hidden mb-5 p-4 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs leading-relaxed">
                 <div class="flex items-start gap-2.5">
-                    <svg class="w-5 h-5 text-blue-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    <svg class="w-5 h-5 text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
                     <div>
-                        <span class="font-semibold text-white">Dica do Visualizador:</span>
-                        Navegadores modernos costumam bloquear cookies de login dentro de visualizadores em iframe. Se não conseguir entrar, clique abaixo para abrir em uma nova aba:
+                        <span class="font-bold text-amber-300 block mb-1">Aviso de Segurança do Navegador (Iframe):</span>
+                        Navegadores modernos (Chrome, Safari, Edge) bloqueiam cookies de sessão em janelas embutidas em iframe. Se o login não concluir, abra o sistema em uma nova aba:
                     </div>
                 </div>
                 <a href="/admin/login" target="_blank" 
-                    class="mt-3 block text-center w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 px-3 rounded-lg transition-all text-xs border border-slate-700">
+                    class="mt-3 block text-center w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-3 rounded-lg transition-all text-xs shadow-md">
                     Abrir Painel em Nova Aba ↗
                 </a>
             </div>
@@ -104,6 +130,11 @@
     </div>
 
     <script>
+        function fillCredentials(usr, pwd) {
+            document.getElementById('username').value = usr;
+            document.getElementById('password').value = pwd;
+        }
+
         // Detect if the page is loaded inside an iframe (like the AI Studio preview)
         if (window.self !== window.top) {
             document.getElementById('iframe-warning').classList.remove('hidden');
