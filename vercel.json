@@ -7,15 +7,22 @@
       "config": {
         "includeFiles": [
           "templates/**",
-          "static/**"
+          "static/**",
+          "app/**",
+          "firebase-applet-config.json"
         ]
       }
     }
   ],
   "routes": [
     {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "app/main.py"
     }
   ]
 }
+
