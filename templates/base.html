@@ -51,7 +51,7 @@
         <div class="header-container">
             <!-- Logo / Brand -->
             <a href="/" class="brand-logo" id="logo-link">
-                <img src="/logo.png" alt="Logo Oloroke Birigui" class="logo-icon" style="height: 42px; width: 42px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--accent);" />
+                <img src="/logo.png?v={{ get_logo_version() if get_logo_version is defined else '1' }}" alt="Logo Oloroke Birigui" class="logo-icon" style="height: 42px; width: 42px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--accent);" />
                 <div class="brand-text">
                     <span class="brand-title">Oloroke Birigui</span>
                     <span class="brand-subtitle">Terreiro de Axé</span>

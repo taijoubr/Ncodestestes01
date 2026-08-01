@@ -2,8 +2,16 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 import os
+import time
 
 from app.database import engine, Base
+
+GLOBAL_LOGO_CACHE = None
+GLOBAL_LOGO_VERSION = int(time.time())
+
+def get_logo_version():
+    return GLOBAL_LOGO_VERSION
+
 from app.routes import router
 
 # Define FastAPI application with metadata
@@ -36,11 +44,10 @@ except Exception as e:
 
 from fastapi.responses import FileResponse, Response
 
-GLOBAL_LOGO_CACHE = None
-
 def set_global_logo_cache(raw_bytes: bytes, mime_type: str):
-    global GLOBAL_LOGO_CACHE
+    global GLOBAL_LOGO_CACHE, GLOBAL_LOGO_VERSION
     GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": mime_type}
+    GLOBAL_LOGO_VERSION = int(time.time())
     tmp_path = "/tmp/logo.png"
     try:
         with open(tmp_path, "wb") as f:

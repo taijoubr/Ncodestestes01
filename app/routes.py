@@ -14,6 +14,14 @@ router = APIRouter()
 # Setup templates directory (located in the project root /templates)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+def _get_logo_ver():
+    try:
+        from app.main import get_logo_version
+        return get_logo_version()
+    except Exception:
+        return 1
+
+templates.env.globals["get_logo_version"] = _get_logo_ver
 
 # Custom template filters for Portuguese date formatting
 PT_MONTHS = {
@@ -1919,6 +1927,7 @@ async def admin_user_update(
 @router.post("/admin/config/logo")
 async def admin_config_logo(
     request: Request,
+    logo: UploadFile = File(None),
     db: Session = Depends(get_db)
 ):
     user_id = get_session_user_id(request)
@@ -1933,19 +1942,28 @@ async def admin_config_logo(
             request.session["msg_error"] = "Você não tem permissão para alterar as configurações do terreiro."
             return RedirectResponse(url="/admin?tab=configuracoes", status_code=303)
             
-        form = await request.form()
-        logo_file = form.get("logo")
+        data = None
+        filename = "logo.png"
+        content_type = "image/png"
 
-        if not logo_file or not hasattr(logo_file, "filename") or not logo_file.filename:
+        if logo and hasattr(logo, "filename") and logo.filename:
+            filename = logo.filename
+            content_type = getattr(logo, "content_type", None) or "image/png"
+            data = await logo.read()
+
+        if not data:
+            form = await request.form()
+            f = form.get("logo")
+            if f and hasattr(f, "filename") and f.filename:
+                filename = f.filename
+                content_type = getattr(f, "content_type", None) or "image/png"
+                data = await f.read()
+
+        if not data:
             request.session["msg_error"] = "Nenhum arquivo enviado ou arquivo inválido. Por favor selecione uma imagem."
             return RedirectResponse(url="/admin?tab=configuracoes", status_code=303)
-            
-        data = await logo_file.read()
-        if not data:
-            request.session["msg_error"] = "O arquivo enviado está vazio."
-            return RedirectResponse(url="/admin?tab=configuracoes", status_code=303)
 
-        mime_type = getattr(logo_file, "content_type", None) or "image/png"
+        mime_type = content_type
         if data.startswith(b"<svg") or b"<?xml" in data[:100]:
             mime_type = "image/svg+xml"
 
@@ -1974,6 +1992,7 @@ async def admin_config_logo(
                 c_mime.valor = mime_type
             db.commit()
         except Exception as ex:
+            db.rollback()
             print(f"Warning: could not save logo to SQLite DB: {ex}")
 
         # 3. Save to Firestore for permanent cloud backup across environments
@@ -1984,7 +2003,7 @@ async def admin_config_logo(
                 db_fs.collection("configuracoes").document("logo_data").set({
                     "logo_b64": b64_str,
                     "mime_type": mime_type,
-                    "filename": logo_file.filename,
+                    "filename": filename,
                     "updated_at": datetime.datetime.utcnow().isoformat()
                 })
         except Exception as ex:
