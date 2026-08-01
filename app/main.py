@@ -34,20 +34,58 @@ try:
 except Exception as e:
     print(f"Warning: Could not create static directories (read-only filesystem): {e}")
 
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 @app.get("/static/images/logo.png")
 async def serve_logo_png():
+    # 1. Check /tmp/logo.png cache
+    tmp_path = "/tmp/logo.png"
+    if os.path.exists(tmp_path):
+        mime_type = "image/png"
+        try:
+            with open(tmp_path, "rb") as f:
+                head = f.read(100)
+            if b"<svg" in head or b"<?xml" in head:
+                mime_type = "image/svg+xml"
+        except Exception:
+            pass
+        return FileResponse(tmp_path, media_type=mime_type)
+
+    # 2. Check Firestore for persisted logo_data
+    try:
+        from app.firebase_config import get_firestore_client
+        db_fs = get_firestore_client()
+        if db_fs:
+            doc = db_fs.collection("configuracoes").document("logo_data").get()
+            if doc.exists:
+                data_dict = doc.to_dict()
+                b64_str = data_dict.get("logo_b64")
+                mime_type = data_dict.get("mime_type", "image/png")
+                if b64_str:
+                    import base64
+                    raw_bytes = base64.b64decode(b64_str)
+                    # Cache to /tmp for fast subsequent requests
+                    try:
+                        with open(tmp_path, "wb") as f:
+                            f.write(raw_bytes)
+                    except Exception:
+                        pass
+                    return Response(content=raw_bytes, media_type=mime_type)
+    except Exception as ex:
+        print(f"Error serving custom logo from Firestore: {ex}")
+
+    # 3. Fallback to default static file
     path = os.path.join(BASE_DIR, "static/images/logo.png")
     if os.path.exists(path):
+        mime_type = "image/png"
         try:
             with open(path, "rb") as f:
                 head = f.read(100)
             if b"<svg" in head or b"<?xml" in head:
-                return FileResponse(path, media_type="image/svg+xml")
+                mime_type = "image/svg+xml"
         except Exception:
             pass
-        return FileResponse(path)
+        return FileResponse(path, media_type=mime_type)
     return FileResponse(path)
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")

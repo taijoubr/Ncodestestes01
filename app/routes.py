@@ -890,6 +890,10 @@ async def admin_membro_ficha_me(request: Request, db: Session = Depends(get_db))
     if not current_user:
         return RedirectResponse(url="/admin/login", status_code=303)
 
+    if current_user.role not in ['programador', 'pai_de_santo', 'tesoureiro', 'secretario']:
+        request.session["msg_error"] = "Apenas administradores (a partir do cargo de Tesoureiro) têm permissão para imprimir fichas."
+        return RedirectResponse(url="/admin", status_code=303)
+
     membro = db.query(Membro).filter(
         (Membro.email == current_user.email) | 
         (Membro.nome == current_user.full_name) | 
@@ -928,6 +932,10 @@ async def admin_membro_ficha(membro_id: int, request: Request, db: Session = Dep
     current_user = db.query(User).filter(User.id == user_id).first()
     if not current_user:
         return RedirectResponse(url="/admin/login", status_code=303)
+
+    if current_user.role not in ['programador', 'pai_de_santo', 'tesoureiro', 'secretario']:
+        request.session["msg_error"] = "Apenas administradores (a partir do cargo de Tesoureiro) têm permissão para imprimir fichas de membros."
+        return RedirectResponse(url="/admin", status_code=303)
 
     membro = db.query(Membro).filter(Membro.id == membro_id).first()
     if not membro:
@@ -1875,21 +1883,49 @@ async def admin_config_logo(
             request.session["msg_error"] = "Nenhum arquivo enviado ou arquivo inválido. Por favor selecione uma imagem."
             return RedirectResponse(url="/admin?tab=configuracoes", status_code=303)
             
-        # Create folder if it doesn't exist
-        os.makedirs(os.path.join(BASE_DIR, "static/images"), exist_ok=True)
-        
-        # Read file data
         data = await logo_file.read()
-        
         if not data:
             request.session["msg_error"] = "O arquivo enviado está vazio."
             return RedirectResponse(url="/admin?tab=configuracoes", status_code=303)
-            
-        # Save as logo.png
-        logo_path = os.path.join(BASE_DIR, "static/images/logo.png")
-        with open(logo_path, "wb") as f:
-            f.write(data)
-            
+
+        mime_type = getattr(logo_file, "content_type", None) or "image/png"
+        if data.startswith(b"<svg") or b"<?xml" in data[:100]:
+            mime_type = "image/svg+xml"
+
+        # 1. Save to /tmp/logo.png (always writable in Vercel/Lambda environment)
+        tmp_logo_path = "/tmp/logo.png"
+        try:
+            with open(tmp_logo_path, "wb") as f:
+                f.write(data)
+        except Exception as ex:
+            print(f"Warning: could not write to /tmp/logo.png: {ex}")
+
+        # 2. Try saving to static/images/logo.png if filesystem is writable
+        try:
+            static_dir = os.path.join(BASE_DIR, "static/images")
+            os.makedirs(static_dir, exist_ok=True)
+            logo_path = os.path.join(static_dir, "logo.png")
+            with open(logo_path, "wb") as f:
+                f.write(data)
+        except Exception as ex:
+            print(f"Notice: static/images/logo.png read-only (expected on Vercel/serverless): {ex}")
+
+        # 3. Save to Firestore for permanent persistence across container restarts
+        try:
+            from app.firebase_config import get_firestore_client
+            db_fs = get_firestore_client()
+            if db_fs:
+                import base64
+                b64_str = base64.b64encode(data).decode("utf-8")
+                db_fs.collection("configuracoes").document("logo_data").set({
+                    "logo_b64": b64_str,
+                    "mime_type": mime_type,
+                    "filename": logo_file.filename,
+                    "updated_at": datetime.datetime.utcnow().isoformat()
+                })
+        except Exception as ex:
+            print(f"Warning: could not save logo to Firestore: {ex}")
+
         request.session["msg_success"] = "Logotipo do terreiro atualizado com sucesso!"
     except Exception as e:
         request.session["msg_error"] = f"Erro ao atualizar o logotipo: {e}"
