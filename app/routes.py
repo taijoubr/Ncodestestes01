@@ -679,7 +679,7 @@ async def admin_dashboard(
         if tab not in ["inicio", "financeiro", "configuracoes", "quadro_avisos", "calendario_giras", "site", "mensalidades", "membros"]:
             tab = "financeiro"
     elif user_role == "secretario":
-        if tab not in ["inicio", "site", "configuracoes", "quadro_avisos", "consultas"]:
+        if tab not in ["inicio", "site", "configuracoes", "quadro_avisos", "consultas", "membros"]:
             tab = "site"
     elif user_role == "membro":
         allowed_tabs = ["inicio", "site", "configuracoes", "quadro_avisos"]
@@ -698,12 +698,20 @@ async def admin_dashboard(
     config_pct = db.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "porcentagem_casa").first()
     porcentagem_casa = float(config_pct.valor) if config_pct else 30.0
 
+    # Query corresponding Membro record for the logged in user
+    current_membro = db.query(Membro).filter(
+        (Membro.email == current_user.email) | 
+        (Membro.nome == current_user.full_name) | 
+        (Membro.nome == current_user.username)
+    ).first()
+
     context_data = {
         "active_tab": tab,
         "msg_success": msg_success,
         "msg_error": msg_error,
         "search_query": search,
         "current_user": current_user,
+        "current_membro": current_membro,
         "is_allowed_membro": is_allowed_membro,
         "porcentagem_casa": porcentagem_casa
     }
@@ -868,6 +876,69 @@ async def admin_dashboard(
         request=request,
         name="admin.html",
         context=context_data
+    )
+
+
+@router.get("/admin/membros/ficha/me", response_class=HTMLResponse)
+async def admin_membro_ficha_me(request: Request, db: Session = Depends(get_db)):
+    user_id = get_session_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/admin/login", status_code=303)
+    
+    from app.models import User, Membro
+    current_user = db.query(User).filter(User.id == user_id).first()
+    if not current_user:
+        return RedirectResponse(url="/admin/login", status_code=303)
+
+    membro = db.query(Membro).filter(
+        (Membro.email == current_user.email) | 
+        (Membro.nome == current_user.full_name) | 
+        (Membro.nome == current_user.username)
+    ).first()
+
+    if not membro:
+        membro = Membro(
+            id=current_user.id,
+            nome=current_user.full_name or current_user.username,
+            cargo=current_user.role.title(),
+            telefone=current_user.phone or "",
+            email=current_user.email or "",
+            data_ingresso=current_user.created_at.date() if hasattr(current_user, "created_at") and current_user.created_at else datetime.date.today(),
+            ativo=current_user.is_active,
+            isento_mensalidade=False,
+            aprovado_consulta_privada=False,
+            observacoes="Cadastro oficial do usuário no sistema."
+        )
+
+    today_str = datetime.date.today().strftime("%d/%m/%Y")
+    return templates.TemplateResponse(
+        request=request,
+        name="ficha_impressao.html",
+        context={"membro": membro, "today_date": today_str, "current_user": current_user}
+    )
+
+
+@router.get("/admin/membros/ficha/{membro_id}", response_class=HTMLResponse)
+async def admin_membro_ficha(membro_id: int, request: Request, db: Session = Depends(get_db)):
+    user_id = get_session_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/admin/login", status_code=303)
+
+    from app.models import User, Membro
+    current_user = db.query(User).filter(User.id == user_id).first()
+    if not current_user:
+        return RedirectResponse(url="/admin/login", status_code=303)
+
+    membro = db.query(Membro).filter(Membro.id == membro_id).first()
+    if not membro:
+        request.session["msg_error"] = "Membro não encontrado."
+        return RedirectResponse(url="/admin?tab=membros", status_code=303)
+
+    today_str = datetime.date.today().strftime("%d/%m/%Y")
+    return templates.TemplateResponse(
+        request=request,
+        name="ficha_impressao.html",
+        context={"membro": membro, "today_date": today_str, "current_user": current_user}
     )
 
 

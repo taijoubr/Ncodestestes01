@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ficha Cadastral do Membro - {{ membro.nome if membro else 'Oloroke Birigui' }}</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        .font-serif-header {
+            font-family: 'Cinzel', serif;
+        }
+        
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .print-card {
+                box-shadow: none !important;
+                border: 1px solid #cbd5e1 !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+                padding: 2rem !important;
+            }
+            @page {
+                size: A4;
+                margin: 1.5cm;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen py-8 px-4 flex flex-col items-center justify-start">
+
+    <!-- Top Action Bar (Hidden in Print) -->
+    <div class="no-print w-full max-w-3xl mb-6 flex flex-wrap items-center justify-between gap-4 bg-slate-900 text-white p-4 rounded-2xl shadow-lg">
+        <div class="flex items-center gap-3">
+            <a href="/admin?tab=membros" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                Voltar ao Painel
+            </a>
+            <span class="text-xs text-slate-400 font-mono">Ficha de Cadastro Oficial</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="/admin/membros/export-excel?membro_id={{ membro.id if membro else '' }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Exportar Excel (.xlsx)
+            </a>
+            <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                Imprimir Ficha (PDF/Papel)
+            </button>
+        </div>
+    </div>
+
+    <!-- Printable Card Container -->
+    <div class="print-card w-full max-w-3xl bg-white border border-slate-200 rounded-3xl shadow-xl p-8 md:p-12 space-y-8">
+        
+        <!-- Terreiro Header -->
+        <div class="text-center border-b-2 border-slate-900 pb-6">
+            <div class="inline-block p-3 bg-slate-900 text-white rounded-2xl mb-3">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0V8m0 3h4m-4 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 font-serif-header uppercase tracking-wider">Oloroke Birigui</h1>
+            <p class="text-xs text-slate-600 font-bold uppercase tracking-widest mt-1">Centro Espírita & Templo de Umbanda e Candomblé</p>
+            <p class="text-[11px] text-slate-500 font-mono mt-1">Birigui - SP &bull; Ficha Oficial de Registro Cadastral da Corrente Espiritual</p>
+        </div>
+
+        <!-- Ficha Title -->
+        <div class="bg-slate-100 border border-slate-200 rounded-xl p-3 text-center">
+            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-widest">Ficha Cadastral do Médium / Membro</h2>
+            <p class="text-[10px] text-slate-500 font-mono">Registro Nº: #{{ "%04d"|format(membro.id) if membro else '0000' }} &bull; Emissão: {{ today_date }}</p>
+        </div>
+
+        <!-- Identificação do Membro -->
+        <div class="space-y-4">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-1">1. Identificação do Membro</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Nome Completo</span>
+                    <span class="font-bold text-slate-900 text-base block mt-0.5">{{ membro.nome if membro else '-' }}</span>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Cargo / Função Espiritual</span>
+                    <span class="font-bold text-blue-800 text-base block mt-0.5">{{ membro.cargo if membro else '-' }}</span>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Telefone de Contato</span>
+                    <span class="font-semibold text-slate-800 font-mono block mt-0.5">{{ membro.telefone or '-' }}</span>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Endereço de E-mail</span>
+                    <span class="font-semibold text-slate-800 font-mono block mt-0.5">{{ membro.email or '-' }}</span>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Data de Ingresso na Corrente</span>
+                    <span class="font-semibold text-slate-800 font-mono block mt-0.5">{{ membro.data_ingresso | format_date if membro else '-' }}</span>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Status de Atividade</span>
+                    {% if membro and membro.ativo %}
+                    <span class="inline-flex items-center gap-1 font-bold text-emerald-700 text-xs mt-1">● Ativo na Corrente Espiritual</span>
+                    {% else %}
+                    <span class="inline-flex items-center gap-1 font-bold text-slate-500 text-xs mt-1">○ Inativo / Afastado</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Situação Administrativa e Financeira -->
+        <div class="space-y-4">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-1">2. Situação Administrativa & Espiritual</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Mensalidade da Casa</span>
+                    {% if membro and membro.isento_mensalidade %}
+                    <span class="font-bold text-blue-700 block mt-0.5">Isento(a) de Mensalidade</span>
+                    {% else %}
+                    <span class="font-bold text-slate-800 block mt-0.5">Mensalidade Regular (Contribuição Mensal)</span>
+                    {% endif %}
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Atendimento Privado / Consulta</span>
+                    {% if membro and membro.aprovado_consulta_privada %}
+                    <span class="font-bold text-emerald-700 block mt-0.5">Habilitado(a) para Consulta Privada</span>
+                    {% else %}
+                    <span class="font-bold text-slate-500 block mt-0.5">Não Habilitado(a)</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Observações e Histórico -->
+        <div class="space-y-2">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-1">3. Observações & Anotações da Direção</h3>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed italic min-h-[80px]">
+                {{ membro.observacoes if (membro and membro.observacoes) else 'Nenhuma observação especial registrada até o momento.' }}
+            </div>
+        </div>
+
+        <!-- Termo e Assinaturas -->
+        <div class="pt-8 space-y-12 border-t-2 border-slate-200">
+            <p class="text-[10px] text-slate-500 text-center leading-relaxed italic">
+                Declaro que as informações acima são verdadeiras e estou ciente do regulamento interno, deveres de conduta e preceitos espirituais da nossa casa.
+            </p>
+
+            <div class="grid grid-cols-2 gap-8 text-center pt-4">
+                <div class="space-y-1">
+                    <div class="border-b border-slate-400 w-4/5 mx-auto"></div>
+                    <p class="text-xs font-bold text-slate-800 pt-1">{{ membro.nome if membro else 'Assinatura do Membro' }}</p>
+                    <p class="text-[10px] text-slate-500 font-mono">Médium / Membro da Corrente</p>
+                </div>
+                <div class="space-y-1">
+                    <div class="border-b border-slate-400 w-4/5 mx-auto"></div>
+                    <p class="text-xs font-bold text-slate-800 pt-1">Direção do Terreiro / Pai de Santo</p>
+                    <p class="text-[10px] text-slate-500 font-mono">Oloroke Birigui</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="pt-6 border-t border-slate-100 text-center text-[10px] text-slate-400 font-mono">
+            Documento emitido eletronicamente através do Sistema de Gestão Oloroke Birigui em {{ today_date }}.
+        </div>
+
+    </div>
+
+</body>
+</html>
