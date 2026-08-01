@@ -7,10 +7,32 @@ import time
 from app.database import engine, Base
 
 GLOBAL_LOGO_CACHE = None
-GLOBAL_LOGO_VERSION = int(time.time())
+GLOBAL_LOGO_VERSION = str(int(time.time()))
+
+def detect_image_mime(raw_bytes: bytes, fallback_mime: str = "image/png") -> str:
+    if not raw_bytes:
+        return fallback_mime or "image/png"
+    header = raw_bytes[:100]
+    if header.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    elif header.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    elif header.startswith(b"RIFF") and b"WEBP" in header[:20]:
+        return "image/webp"
+    elif header.startswith(b"GIF87a") or header.startswith(b"GIF89a"):
+        return "image/gif"
+    elif b"<svg" in header.lower() or b"<?xml" in header.lower():
+        return "image/svg+xml"
+    return fallback_mime or "image/png"
 
 def get_logo_version():
-    return GLOBAL_LOGO_VERSION
+    global GLOBAL_LOGO_CACHE, GLOBAL_LOGO_VERSION
+    if GLOBAL_LOGO_CACHE is not None and "version" in GLOBAL_LOGO_CACHE:
+        return GLOBAL_LOGO_CACHE["version"]
+    get_logo_bytes()
+    if GLOBAL_LOGO_CACHE is not None and "version" in GLOBAL_LOGO_CACHE:
+        return GLOBAL_LOGO_CACHE["version"]
+    return str(GLOBAL_LOGO_VERSION)
 
 from app.routes import router
 
@@ -44,16 +66,26 @@ except Exception as e:
 
 from fastapi.responses import FileResponse, Response
 
-def set_global_logo_cache(raw_bytes: bytes, mime_type: str):
+def set_global_logo_cache(raw_bytes: bytes, mime_type: str = "image/png"):
     global GLOBAL_LOGO_CACHE, GLOBAL_LOGO_VERSION
-    GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": mime_type}
-    GLOBAL_LOGO_VERSION = int(time.time())
+    import hashlib
+    real_mime = detect_image_mime(raw_bytes, mime_type)
+    ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
+    
+    GLOBAL_LOGO_CACHE = {
+        "bytes": raw_bytes,
+        "mime": real_mime,
+        "version": ver_str
+    }
+    GLOBAL_LOGO_VERSION = ver_str
+
     tmp_path = "/tmp/logo.png"
     try:
         with open(tmp_path, "wb") as f:
             f.write(raw_bytes)
     except Exception:
         pass
+
     try:
         static_dir = os.path.join(BASE_DIR, "static/images")
         os.makedirs(static_dir, exist_ok=True)
@@ -63,44 +95,19 @@ def set_global_logo_cache(raw_bytes: bytes, mime_type: str):
         import json
         b64_str = base64.b64encode(raw_bytes).decode("utf-8")
         with open(os.path.join(static_dir, "logo_b64.json"), "w") as f:
-            json.dump({"b64": b64_str, "mime": mime_type}, f)
+            json.dump({"b64": b64_str, "mime": real_mime, "version": ver_str}, f)
     except Exception as ex:
-        print(f"Notice saving logo file: {ex}")
+        print(f"Notice saving logo static file: {ex}")
 
 def get_logo_bytes():
-    global GLOBAL_LOGO_CACHE
-    if GLOBAL_LOGO_CACHE is not None:
+    global GLOBAL_LOGO_CACHE, GLOBAL_LOGO_VERSION
+    if GLOBAL_LOGO_CACHE is not None and GLOBAL_LOGO_CACHE.get("bytes"):
         return GLOBAL_LOGO_CACHE["bytes"], GLOBAL_LOGO_CACHE["mime"]
 
-    tmp_path = "/tmp/logo.png"
-    if os.path.exists(tmp_path):
-        try:
-            with open(tmp_path, "rb") as f:
-                raw_bytes = f.read()
-            if raw_bytes:
-                mime_type = "image/svg+xml" if (b"<svg" in raw_bytes[:100] or b"<?xml" in raw_bytes[:100]) else "image/png"
-                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": mime_type}
-                return raw_bytes, mime_type
-        except Exception:
-            pass
+    import base64
+    import hashlib
 
-    # Check local static/images/logo_b64.json file backup
-    try:
-        json_path = os.path.join(BASE_DIR, "static/images/logo_b64.json")
-        if os.path.exists(json_path):
-            import json
-            import base64
-            with open(json_path, "r") as f:
-                data = json.load(f)
-            if data and "b64" in data:
-                raw_bytes = base64.b64decode(data["b64"])
-                mime_type = data.get("mime", "image/png")
-                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": mime_type}
-                return raw_bytes, mime_type
-    except Exception as ex:
-        print(f"Error reading logo_b64.json: {ex}")
-
-    # Check SQLite database
+    # 1. Check SQLite database FIRST (Source of truth for user config)
     try:
         from app.database import SessionLocal
         from app.models import ConfiguracaoSistema
@@ -109,22 +116,26 @@ def get_logo_bytes():
             cfg_b64 = db.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_b64").first()
             cfg_mime = db.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_mime").first()
             if cfg_b64 and cfg_b64.valor:
-                import base64
                 raw_bytes = base64.b64decode(cfg_b64.valor)
-                mime_type = cfg_mime.valor if cfg_mime and cfg_mime.valor else "image/png"
-                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": mime_type}
+                stored_mime = cfg_mime.valor if cfg_mime and cfg_mime.valor else "image/png"
+                real_mime = detect_image_mime(raw_bytes, stored_mime)
+                ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
+                
+                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
+                GLOBAL_LOGO_VERSION = ver_str
+                
                 try:
-                    with open(tmp_path, "wb") as f:
+                    with open("/tmp/logo.png", "wb") as f:
                         f.write(raw_bytes)
                 except Exception:
                     pass
-                return raw_bytes, mime_type
+                return raw_bytes, real_mime
         finally:
             db.close()
     except Exception as ex:
         print(f"Error fetching logo from SQLite: {ex}")
 
-    # Check Firestore
+    # 2. Check Firestore
     try:
         from app.firebase_config import get_firestore_client
         db_fs = get_firestore_client()
@@ -133,16 +144,14 @@ def get_logo_bytes():
             if doc.exists:
                 data_dict = doc.to_dict()
                 b64_str = data_dict.get("logo_b64")
-                mime_type = data_dict.get("mime_type", "image/png")
+                stored_mime = data_dict.get("mime_type", "image/png")
                 if b64_str:
-                    import base64
                     raw_bytes = base64.b64decode(b64_str)
-                    GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": mime_type}
-                    try:
-                        with open(tmp_path, "wb") as f:
-                            f.write(raw_bytes)
-                    except Exception:
-                        pass
+                    real_mime = detect_image_mime(raw_bytes, stored_mime)
+                    ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
+                    GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
+                    GLOBAL_LOGO_VERSION = ver_str
+                    
                     # Sync to SQLite
                     try:
                         from app.database import SessionLocal
@@ -153,32 +162,66 @@ def get_logo_bytes():
                             db_sql.add(ConfiguracaoSistema(chave="logo_b64", valor=b64_str))
                         else:
                             c_b64.valor = b64_str
-
                         c_mime = db_sql.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_mime").first()
                         if not c_mime:
-                            db_sql.add(ConfiguracaoSistema(chave="logo_mime", valor=mime_type))
+                            db_sql.add(ConfiguracaoSistema(chave="logo_mime", valor=real_mime))
                         else:
-                            c_mime.valor = mime_type
+                            c_mime.valor = real_mime
                         db_sql.commit()
                         db_sql.close()
                     except Exception:
                         pass
-                    return raw_bytes, mime_type
+                    return raw_bytes, real_mime
     except Exception as ex:
         print(f"Error serving custom logo from Firestore: {ex}")
 
-    # Fallback to default static file
+    # 3. Check local static/images/logo_b64.json file backup
+    try:
+        json_path = os.path.join(BASE_DIR, "static/images/logo_b64.json")
+        if os.path.exists(json_path):
+            import json
+            with open(json_path, "r") as f:
+                data = json.load(f)
+            if data and "b64" in data:
+                raw_bytes = base64.b64decode(data["b64"])
+                real_mime = detect_image_mime(raw_bytes, data.get("mime", "image/png"))
+                ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
+                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
+                GLOBAL_LOGO_VERSION = ver_str
+                return raw_bytes, real_mime
+    except Exception as ex:
+        print(f"Error reading logo_b64.json: {ex}")
+
+    # 4. Check /tmp/logo.png
+    tmp_path = "/tmp/logo.png"
+    if os.path.exists(tmp_path):
+        try:
+            with open(tmp_path, "rb") as f:
+                raw_bytes = f.read()
+            if raw_bytes:
+                real_mime = detect_image_mime(raw_bytes, "image/png")
+                ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
+                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
+                GLOBAL_LOGO_VERSION = ver_str
+                return raw_bytes, real_mime
+        except Exception:
+            pass
+
+    # 5. Fallback to default static file static/images/logo.png
     path = os.path.join(BASE_DIR, "static/images/logo.png")
     if os.path.exists(path):
         try:
             with open(path, "rb") as f:
                 raw_bytes = f.read()
             if raw_bytes:
-                mime_type = "image/svg+xml" if (b"<svg" in raw_bytes[:100] or b"<?xml" in raw_bytes[:100]) else "image/png"
-                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": mime_type}
-                return raw_bytes, mime_type
+                real_mime = detect_image_mime(raw_bytes, "image/png")
+                ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
+                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
+                GLOBAL_LOGO_VERSION = ver_str
+                return raw_bytes, real_mime
         except Exception:
             pass
+
     return b"", "image/png"
 
 @app.get("/logo.png")
@@ -189,11 +232,25 @@ async def serve_logo_png():
         return Response(
             content=raw_bytes,
             media_type=mime_type,
-            headers={"Cache-Control": "no-cache, must-revalidate"}
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
         )
     fallback_path = os.path.join(BASE_DIR, "static/images/logo.png")
     if os.path.exists(fallback_path):
-        return FileResponse(fallback_path)
+        try:
+            with open(fallback_path, "rb") as f:
+                fb_bytes = f.read()
+            fb_mime = detect_image_mime(fb_bytes, "image/png")
+            return Response(
+                content=fb_bytes,
+                media_type=fb_mime,
+                headers={"Cache-Control": "no-cache, must-revalidate"}
+            )
+        except Exception:
+            return FileResponse(fallback_path)
     return Response(status_code=404)
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
@@ -511,7 +568,10 @@ def on_startup():
         Base.metadata.create_all(bind=engine)
         print("Database tables synchronized successfully!")
         
-        # Run custom migration to add 'isento' column if it doesn't exist
+        # Run custom schema migrations
+        from app.models import migrate_membro_schema
+        migrate_membro_schema(engine)
+
         from sqlalchemy import text
         with engine.begin() as conn:
             try:

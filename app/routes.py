@@ -526,26 +526,71 @@ async def admin_cadastro_membro_get(request: Request):
 async def admin_cadastro_membro_post(
     request: Request,
     full_name: str = Form(...),
-    username: str = Form(...),
-    phone: str = Form(...),
+    cpf: str = Form(...),
     birth_date: str = Form(...),
-    email: str = Form(...),
+    username: str = Form(...),
     password: str = Form(...),
+    whatsapp: str = Form(...),
+    email: str = Form(...),
+    cep: str = Form(""),
+    cidade: str = Form(""),
+    uf: str = Form(""),
+    endereco: str = Form(""),
+    numero: str = Form(""),
+    complemento: str = Form(""),
+    bairro: str = Form(""),
+    emergencia_nome: str = Form(""),
+    emergencia_parentesco: str = Form(""),
+    emergencia_telefone: str = Form(""),
+    emergencia_observacao: str = Form(""),
     db: Session = Depends(get_db)
 ):
-    from app.models import User
+    from app.models import User, Membro
     from app.auth_utils import hash_password
+    from app.membro_utils import validate_cpf, format_cpf, generate_next_codigo_membro, clean_digits
     import datetime
 
     form_data = {
         "full_name": full_name,
-        "username": username,
-        "phone": phone,
+        "cpf": cpf,
         "birth_date": birth_date,
-        "email": email
+        "username": username,
+        "whatsapp": whatsapp,
+        "email": email,
+        "cep": cep,
+        "cidade": cidade,
+        "uf": uf,
+        "endereco": endereco,
+        "numero": numero,
+        "complemento": complemento,
+        "bairro": bairro,
+        "emergencia_nome": emergencia_nome,
+        "emergencia_parentesco": emergencia_parentesco,
+        "emergencia_telefone": emergencia_telefone,
+        "emergencia_observacao": emergencia_observacao
     }
 
     try:
+        # Validate CPF
+        cpf_formatted = format_cpf(cpf)
+        if not validate_cpf(cpf_formatted):
+            return templates.TemplateResponse(
+                request=request,
+                name="cadastro_membro.html",
+                context={"success": False, "error": "CPF inválido. Verifique os dígitos digitados.", "form_data": form_data}
+            )
+
+        # Check CPF uniqueness
+        clean_cpf_val = clean_digits(cpf)
+        existing_cpf = db.query(Membro).filter(Membro.cpf != None).all()
+        for m in existing_cpf:
+            if m.cpf and clean_digits(m.cpf) == clean_cpf_val:
+                return templates.TemplateResponse(
+                    request=request,
+                    name="cadastro_membro.html",
+                    context={"success": False, "error": "Este CPF já está cadastrado na corrente.", "form_data": form_data}
+                )
+
         # Check collision on username
         existing_username = db.query(User).filter(User.username == username.strip()).first()
         if existing_username:
@@ -573,13 +618,16 @@ async def admin_cadastro_membro_post(
                 context={"success": False, "error": "Data de nascimento inválida.", "form_data": form_data}
             )
 
+        # Generate sequential member code (M0001, M0002...)
+        next_code = generate_next_codigo_membro(db)
+
         # Create unapproved User with "membro" role
         new_user = User(
             username=username.strip(),
             email=email.strip(),
             hashed_password=hash_password(password),
             full_name=full_name.strip(),
-            phone=phone.strip(),
+            phone=whatsapp.strip(),
             birth_date=birth_date_parsed,
             role="membro",
             is_approved=False,
@@ -587,6 +635,36 @@ async def admin_cadastro_membro_post(
             is_admin=True # Ensure dashboard access
         )
         db.add(new_user)
+
+        # Create Membro record staged as Inativo / Pendente
+        new_membro = Membro(
+            codigo_membro=next_code,
+            situacao="Inativo", # Wait for admin approval to activate
+            nome=full_name.strip(),
+            cpf=cpf_formatted,
+            data_nascimento=birth_date_parsed,
+            data_cadastro=datetime.datetime.utcnow(),
+            whatsapp=whatsapp.strip(),
+            telefone=whatsapp.strip(),
+            email=email.strip(),
+            cep=cep.strip(),
+            cidade=cidade.strip(),
+            uf=uf.strip().upper(),
+            endereco=endereco.strip(),
+            numero=numero.strip(),
+            complemento=complemento.strip(),
+            bairro=bairro.strip(),
+            emergencia_nome=emergencia_nome.strip(),
+            emergencia_parentesco=emergencia_parentesco.strip(),
+            emergencia_telefone=emergencia_telefone.strip(),
+            emergencia_observacao=emergencia_observacao.strip(),
+            data_ingresso=datetime.date.today(),
+            cargo="Médium",
+            ativo=False,
+            responsavel_cadastro="Cadastro Público",
+            responsavel_ultima_alteracao="Membro (Auto-cadastro)"
+        )
+        db.add(new_membro)
         db.commit()
 
         return templates.TemplateResponse(
@@ -999,25 +1077,156 @@ async def admin_membro_ficha(membro_id: int, request: Request, db: Session = Dep
         return RedirectResponse(url="/admin/login", status_code=303)
 
     from app.models import User, Membro
+    from app.membro_utils import mask_cpf, format_cpf
+    import datetime
+
     current_user = db.query(User).filter(User.id == user_id).first()
     if not current_user:
         return RedirectResponse(url="/admin/login", status_code=303)
-
-    if current_user.role not in ['programador', 'pai_de_santo', 'tesoureiro', 'secretario']:
-        request.session["msg_error"] = "Apenas administradores (a partir do cargo de Tesoureiro) têm permissão para imprimir fichas de membros."
-        return RedirectResponse(url="/admin", status_code=303)
 
     membro = db.query(Membro).filter(Membro.id == membro_id).first()
     if not membro:
         request.session["msg_error"] = "Membro não encontrado."
         return RedirectResponse(url="/admin?tab=membros", status_code=303)
 
-    today_str = datetime.date.today().strftime("%d/%m/%Y")
+    # Check user permissions
+    can_edit = current_user.role in ["programador", "pai_de_santo", "secretario", "tesoureiro"]
+    can_see_restricted = current_user.role in ["programador", "pai_de_santo", "secretario"]
+
+    # CPF privacy: format if authorized, mask otherwise
+    if can_see_restricted:
+        masked_cpf = format_cpf(membro.cpf)
+    else:
+        masked_cpf = mask_cpf(membro.cpf)
+
+    msg_success = request.session.pop("msg_success", None)
+    msg_error = request.session.pop("msg_error", None)
+
     return templates.TemplateResponse(
         request=request,
-        name="ficha_impressao.html",
-        context={"membro": membro, "today_date": today_str, "current_user": current_user}
+        name="ficha_membro.html",
+        context={
+            "membro": membro,
+            "current_user": current_user,
+            "can_edit": can_edit,
+            "can_see_restricted": can_see_restricted,
+            "masked_cpf": masked_cpf,
+            "msg_success": msg_success,
+            "msg_error": msg_error
+        }
     )
+
+
+@router.post("/admin/membros/ficha/{membro_id}/update")
+async def admin_membro_ficha_update(
+    membro_id: int,
+    request: Request,
+    situacao: str = Form("Ativo"),
+    nome: str = Form(...),
+    data_nascimento: str = Form(""),
+    cpf: str = Form(""),
+    whatsapp: str = Form(""),
+    email: str = Form(""),
+    cep: str = Form(""),
+    cidade: str = Form(""),
+    uf: str = Form(""),
+    endereco: str = Form(""),
+    numero: str = Form(""),
+    complemento: str = Form(""),
+    bairro: str = Form(""),
+    emergencia_nome: str = Form(""),
+    emergencia_parentesco: str = Form(""),
+    emergencia_telefone: str = Form(""),
+    emergencia_observacao: str = Form(""),
+    data_ingresso: str = Form(""),
+    cargo: str = Form(""),
+    orixa_cabeca: str = Form(""),
+    orixa_adjunto: str = Form(""),
+    entidades_linhas: str = Form(""),
+    observacoes_internas: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    user_id = get_session_user_id(request)
+    if not user_id:
+        return RedirectResponse(url="/admin/login", status_code=303)
+
+    from app.models import User, Membro
+    from app.membro_utils import format_cpf, generate_next_codigo_membro
+    import datetime
+
+    current_user = db.query(User).filter(User.id == user_id).first()
+    if not current_user or current_user.role not in ["programador", "pai_de_santo", "secretario", "tesoureiro"]:
+        request.session["msg_error"] = "Você não tem permissão para editar fichas de membros."
+        return RedirectResponse(url=f"/admin/membros/ficha/{membro_id}", status_code=303)
+
+    membro = db.query(Membro).filter(Membro.id == membro_id).first()
+    if not membro:
+        request.session["msg_error"] = "Membro não encontrado."
+        return RedirectResponse(url="/admin?tab=membros", status_code=303)
+
+    try:
+        # Update primary identity fields
+        membro.situacao = situacao.strip()
+        membro.ativo = (situacao.strip() == "Ativo")
+        membro.nome = nome.strip()
+
+        if cpf and not str(cpf).startswith("***"):
+            membro.cpf = format_cpf(cpf)
+
+        if data_nascimento:
+            try:
+                membro.data_nascimento = datetime.datetime.strptime(data_nascimento, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+
+        membro.whatsapp = whatsapp.strip()
+        membro.telefone = whatsapp.strip()
+        membro.email = email.strip()
+        membro.cep = cep.strip()
+        membro.cidade = cidade.strip()
+        membro.uf = uf.strip().upper()
+        membro.endereco = endereco.strip()
+        membro.numero = numero.strip()
+        membro.complemento = complemento.strip()
+        membro.bairro = bairro.strip()
+
+        membro.emergencia_nome = emergencia_nome.strip()
+        membro.emergencia_parentesco = emergencia_parentesco.strip()
+        membro.emergencia_telefone = emergencia_telefone.strip()
+        membro.emergencia_observacao = emergencia_observacao.strip()
+
+        if data_ingresso:
+            try:
+                membro.data_ingresso = datetime.datetime.strptime(data_ingresso, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+
+        if cargo:
+            membro.cargo = cargo.strip()
+        membro.orixa_cabeca = orixa_cabeca.strip()
+        membro.orixa_adjunto = orixa_adjunto.strip()
+        membro.entidades_linhas = entidades_linhas.strip()
+
+        # Update restricted section if authorized
+        if current_user.role in ["programador", "pai_de_santo", "secretario"]:
+            membro.observacoes_internas = observacoes_internas.strip()
+            membro.observacoes = observacoes_internas.strip()
+
+        # Ensure codigo_membro exists
+        if not membro.codigo_membro:
+            membro.codigo_membro = generate_next_codigo_membro(db)
+
+        # Audit metadata
+        membro.updated_at = datetime.datetime.utcnow()
+        membro.responsavel_ultima_alteracao = current_user.full_name or current_user.username
+
+        db.commit()
+        request.session["msg_success"] = "Ficha cadastral atualizada com sucesso!"
+    except Exception as e:
+        db.rollback()
+        request.session["msg_error"] = f"Erro ao atualizar ficha: {e}"
+
+    return RedirectResponse(url=f"/admin/membros/ficha/{membro_id}", status_code=303)
 
 
 # --------------------------------------------------------------------------
@@ -1478,17 +1687,28 @@ async def export_membros_excel(
     ws.row_dimensions[2].height = 18
 
     headers = [
-        "ID",
+        "Código",
+        "Situação",
         "Nome Completo",
-        "Cargo / Função",
-        "Telefone / Celular",
+        "CPF",
+        "Data Nascimento",
+        "WhatsApp / Telefone",
         "E-mail",
+        "CEP",
+        "Cidade / UF",
+        "Endereço Completo",
+        "Contato Emergência - Nome",
+        "Contato Emergência - Fone",
         "Data de Ingresso",
-        "Status na Corrente",
-        "Isenção de Mensalidade",
-        "Mensalidade Padrão (R$)",
+        "Cargo / Função",
+        "Orixá de Cabeça",
+        "Orixá Adjunto",
+        "Entidades / Linhas",
         "Consulta Privada",
-        "Observações / Anotações"
+        "Mensalidade",
+        "Observações Internas",
+        "Última Atualização",
+        "Resp. Alteração"
     ]
 
     ws.append([]) # row 3 blank
@@ -1512,10 +1732,8 @@ async def export_membros_excel(
     query = db.query(Membro)
     if membro_id:
         membros = query.filter(Membro.id == membro_id).all()
-        filename_part = f"membro_{membro_id}"
     else:
-        membros = query.order_by(Membro.nome.asc()).all()
-        filename_part = "todos"
+        membros = query.order_by(Membro.codigo_membro.asc(), Membro.nome.asc()).all()
 
     center_align = Alignment(horizontal="center", vertical="center")
     left_align = Alignment(horizontal="left", vertical="center")
@@ -1523,37 +1741,53 @@ async def export_membros_excel(
     for row_idx, m in enumerate(membros, start=5):
         ws.row_dimensions[row_idx].height = 22
         
+        data_nasc = m.data_nascimento.strftime("%d/%m/%Y") if m.data_nascimento else "-"
         data_ing = m.data_ingresso.strftime("%d/%m/%Y") if m.data_ingresso else "-"
-        status_str = "Ativo na Corrente" if m.ativo else "Afastado / Inativo"
-        isento_str = "Sim" if m.isento_mensalidade else "Não"
+        cidade_uf = f"{m.cidade}/{m.uf}" if m.cidade and m.uf else (m.cidade or m.uf or "-")
+        endereco_comp = f"{m.endereco or ''}, {m.numero or ''} - {m.bairro or ''} ({m.complemento or ''})".strip(" ,-()")
+        if not endereco_comp:
+            endereco_comp = "-"
+        
+        emergencia_info = f"{m.emergencia_nome or ''} ({m.emergencia_parentesco or 'Contato'})".strip(" ()")
+        if not emergencia_info or emergencia_info == "()":
+            emergencia_info = "-"
+
         consulta_str = "Habilitado" if m.aprovado_consulta_privada else "Não Habilitado"
-        valor_mensal = m.valor_mensalidade if m.valor_mensalidade is not None else 50.0
+        mensalidade_str = "Isento" if m.isento_mensalidade else f"R$ {m.valor_mensalidade or 50.0:.2f}"
+        updated_str = m.updated_at.strftime("%d/%m/%Y %H:%M") if m.updated_at else "-"
 
         row_data = [
-            m.id,
+            m.codigo_membro or f"M{m.id:04d}",
+            m.situacao or ("Ativo" if m.ativo else "Inativo"),
             m.nome,
-            m.cargo,
-            m.telefone or "-",
+            m.cpf or "-",
+            data_nasc,
+            m.whatsapp or m.telefone or "-",
             m.email or "-",
+            m.cep or "-",
+            cidade_uf,
+            endereco_comp,
+            emergencia_info,
+            m.emergencia_telefone or "-",
             data_ing,
-            status_str,
-            isento_str,
-            valor_mensal,
+            m.cargo or "Médium",
+            m.orixa_cabeca or "-",
+            m.orixa_adjunto or "-",
+            m.entidades_linhas or "-",
             consulta_str,
-            m.observacoes or "-"
+            mensalidade_str,
+            m.observacoes_internas or m.observacoes or "-",
+            updated_str,
+            m.responsavel_ultima_alteracao or "-"
         ]
 
         for col_idx, val in enumerate(row_data, 1):
             cell = ws.cell(row=row_idx, column=col_idx, value=val)
             cell.border = thin_border
-            if col_idx in [1, 6, 7, 8, 10]:
+            if col_idx in [1, 2, 4, 5, 8, 9, 13, 18, 19, 21]:
                 cell.alignment = center_align
             else:
                 cell.alignment = left_align
-            
-            if col_idx == 9:
-                cell.number_format = 'R$ #,##0.00'
-                cell.alignment = center_align
 
     # Column width auto-fit
     for col in ws.columns:
@@ -1963,16 +2197,14 @@ async def admin_config_logo(
             request.session["msg_error"] = "Nenhum arquivo enviado ou arquivo inválido. Por favor selecione uma imagem."
             return RedirectResponse(url="/admin?tab=configuracoes", status_code=303)
 
-        mime_type = content_type
-        if data.startswith(b"<svg") or b"<?xml" in data[:100]:
-            mime_type = "image/svg+xml"
+        from app.main import set_global_logo_cache, detect_image_mime
+        mime_type = detect_image_mime(data, content_type)
 
         import base64
         b64_str = base64.b64encode(data).decode("utf-8")
 
-        # 1. Save to in-memory cache, /tmp/logo.png, static/images/logo.png and custom_logo.b64
+        # 1. Save to in-memory cache and local file backups
         try:
-            from app.main import set_global_logo_cache
             set_global_logo_cache(data, mime_type)
         except Exception as ex:
             print(f"Warning updating logo cache: {ex}")

@@ -60,18 +60,127 @@ class Membro(Base):
     __tablename__ = "membros"
 
     id = Column(Integer, primary_key=True, index=True)
+    codigo_membro = Column(String(20), unique=True, index=True, nullable=True) # e.g. "M0001"
+    situacao = Column(String(30), default="Ativo")  # "Ativo", "Inativo", "Afastado"
     nome = Column(String(150), nullable=False)
-    cargo = Column(String(100), nullable=False)  # e.g., "Médium de incorporação", "Ogã", "Cambone"
-    telefone = Column(String(30), nullable=True)
+    cpf = Column(String(20), nullable=True)
+    data_nascimento = Column(Date, nullable=True)
+    data_cadastro = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    # Contato e Endereço
+    whatsapp = Column(String(30), nullable=True)
+    telefone = Column(String(30), nullable=True) # compatibility
     email = Column(String(100), nullable=True)
+    cep = Column(String(20), nullable=True)
+    cidade = Column(String(100), nullable=True)
+    uf = Column(String(10), nullable=True)
+    endereco = Column(String(200), nullable=True)
+    numero = Column(String(30), nullable=True)
+    complemento = Column(String(100), nullable=True)
+    bairro = Column(String(100), nullable=True)
+
+    # Contato de Emergência
+    emergencia_nome = Column(String(150), nullable=True)
+    emergencia_parentesco = Column(String(50), nullable=True)
+    emergencia_telefone = Column(String(30), nullable=True)
+    emergencia_observacao = Column(Text, nullable=True)
+
+    # Vínculo com a Casa e Informações Religiosas
     data_ingresso = Column(Date, default=datetime.date.today)
+    cargo = Column(String(100), nullable=False, default="Médium")
+    orixa_cabeca = Column(String(100), nullable=True)
+    orixa_adjunto = Column(String(100), nullable=True)
+    entidades_linhas = Column(Text, nullable=True)
+
+    # Observações Internas — Acesso Restrito
+    observacoes_internas = Column(Text, nullable=True)
+    observacoes = Column(Text, nullable=True) # compatibility
+    responsavel_cadastro = Column(String(150), nullable=True)
+    responsavel_ultima_alteracao = Column(String(150), nullable=True)
+
+    # Configurações financeiras e consultas
     ativo = Column(Boolean, default=True)
-    observacoes = Column(Text, nullable=True)
-    valor_mensalidade = Column(Float, nullable=False, default=50.0) # Valor padrão da mensalidade do membro
-    isento_mensalidade = Column(Boolean, default=False) # Isenção de mensalidade
+    valor_mensalidade = Column(Float, nullable=False, default=50.0)
+    isento_mensalidade = Column(Boolean, default=False)
     aprovado_consulta_privada = Column(Boolean, default=False)
     valor_consulta = Column(Float, default=0.0)
+
+    # Timestamps
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+def migrate_membro_schema(engine):
+    """
+    Ensure newly added columns exist in SQLite/PostgreSQL database without destroying data.
+    Backfills sequential codigo_membro for existing records if null.
+    """
+    from sqlalchemy import inspect, text
+    try:
+        inspector = inspect(engine)
+        columns = [c["name"] for c in inspector.get_columns("membros")]
+        
+        new_cols = {
+            "codigo_membro": "VARCHAR(20)",
+            "situacao": "VARCHAR(30) DEFAULT 'Ativo'",
+            "cpf": "VARCHAR(20)",
+            "data_nascimento": "DATE",
+            "data_cadastro": "TIMESTAMP",
+            "whatsapp": "VARCHAR(30)",
+            "cep": "VARCHAR(20)",
+            "cidade": "VARCHAR(100)",
+            "uf": "VARCHAR(10)",
+            "endereco": "VARCHAR(200)",
+            "numero": "VARCHAR(30)",
+            "complemento": "VARCHAR(100)",
+            "bairro": "VARCHAR(100)",
+            "emergencia_nome": "VARCHAR(150)",
+            "emergencia_parentesco": "VARCHAR(50)",
+            "emergencia_telefone": "VARCHAR(30)",
+            "emergencia_observacao": "TEXT",
+            "orixa_cabeca": "VARCHAR(100)",
+            "orixa_adjunto": "VARCHAR(100)",
+            "entidades_linhas": "TEXT",
+            "observacoes_internas": "TEXT",
+            "responsavel_cadastro": "VARCHAR(150)",
+            "responsavel_ultima_alteracao": "VARCHAR(150)",
+            "updated_at": "TIMESTAMP"
+        }
+
+        with engine.begin() as conn:
+            for col_name, col_type in new_cols.items():
+                if col_name not in columns:
+                    try:
+                        conn.execute(text(f"ALTER TABLE membros ADD COLUMN {col_name} {col_type}"))
+                        print(f"Migration: added column {col_name} to membros table.")
+                    except Exception as col_err:
+                        print(f"Notice adding column {col_name}: {col_err}")
+
+            # Backfill codigo_membro and situacao for existing records without code
+            try:
+                res = conn.execute(text("SELECT id FROM membros WHERE codigo_membro IS NULL OR codigo_membro = '' ORDER BY id ASC")).fetchall()
+                if res:
+                    max_code = 0
+                    existing_codes = conn.execute(text("SELECT codigo_membro FROM membros WHERE codigo_membro IS NOT NULL AND codigo_membro != ''")).fetchall()
+                    for (c_val,) in existing_codes:
+                        if c_val and c_val.startswith("M"):
+                            try:
+                                num = int(c_val[1:])
+                                if num > max_code:
+                                    max_code = num
+                            except ValueError:
+                                pass
+                    for row in res:
+                        max_code += 1
+                        code_str = f"M{max_code:04d}"
+                        conn.execute(text("UPDATE membros SET codigo_membro = :code, situacao = 'Ativo' WHERE id = :mid"), {"code": code_str, "mid": row[0]})
+                    print(f"Migration: backfilled codes for {len(res)} existing members.")
+            except Exception as backfill_err:
+                print(f"Notice backfilling member codes: {backfill_err}")
+
+    except Exception as e:
+        print(f"Warning running migrate_membro_schema: {e}")
+
 
 class TransacaoFinanceira(Base):
     """
