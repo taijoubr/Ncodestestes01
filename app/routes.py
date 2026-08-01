@@ -176,6 +176,7 @@ async def sobre(request: Request):
 
 @router.get("/agenda", response_class=HTMLResponse)
 async def agenda(request: Request, db: Session = Depends(get_db)):
+    import json
     try:
         eventos = db.query(AgendaEvent).filter(AgendaEvent.publico == True).order_by(AgendaEvent.date.asc()).all()
         if not eventos:
@@ -183,10 +184,41 @@ async def agenda(request: Request, db: Session = Depends(get_db)):
     except Exception:
         eventos = [e for e in DEFAULT_EVENTS if e.get("publico", True)]
 
+    eventos_list = []
+    for ev in eventos:
+        if isinstance(ev, dict):
+            eventos_list.append({
+                "id": ev.get("id"),
+                "title": ev.get("title"),
+                "date": str(ev.get("date")),
+                "time": ev.get("time"),
+                "type": ev.get("type"),
+                "status": ev.get("status"),
+                "publico": True,
+                "segmento": ev.get("segmento", "Umbanda"),
+                "description": ev.get("description", "")
+            })
+        else:
+            eventos_list.append({
+                "id": ev.id,
+                "title": ev.title,
+                "date": str(ev.date),
+                "time": ev.time,
+                "type": ev.type,
+                "status": ev.status,
+                "publico": bool(ev.publico),
+                "segmento": ev.segmento or "Umbanda",
+                "description": ev.description or ""
+            })
+
     return templates.TemplateResponse(
         request=request,
         name="agenda.html",
-        context={"active_page": "agenda", "eventos": eventos}
+        context={
+            "active_page": "agenda", 
+            "eventos": eventos,
+            "eventos_json": json.dumps(eventos_list)
+        }
     )
 
 
@@ -771,18 +803,48 @@ async def admin_dashboard(
             pending_members = []
         context_data["pending_members"] = pending_members
     elif tab == "site":
+        import json
         avisos = db.query(Aviso).order_by(Aviso.date_posted.desc()).all()
         agenda_events = db.query(AgendaEvent).order_by(AgendaEvent.date.desc()).all()
         context_data["avisos"] = avisos
         context_data["agenda_events"] = agenda_events
+        events_list = []
+        for ev in agenda_events:
+            events_list.append({
+                "id": ev.id,
+                "title": ev.title,
+                "date": str(ev.date),
+                "time": ev.time,
+                "type": ev.type,
+                "status": ev.status,
+                "publico": bool(ev.publico),
+                "segmento": ev.segmento or "Umbanda",
+                "description": ev.description or ""
+            })
+        context_data["agenda_events_json"] = json.dumps(events_list)
     elif tab == "quadro_avisos":
         avisos_internos = db.query(QuadroAviso).order_by(QuadroAviso.date_posted.desc()).all()
         avisos = db.query(Aviso).order_by(Aviso.date_posted.desc()).all()
         context_data["avisos_internos"] = avisos_internos
         context_data["avisos"] = avisos
     elif tab == "calendario_giras":
+        import json
         agenda_events = db.query(AgendaEvent).order_by(AgendaEvent.date.desc()).all()
         context_data["agenda_events"] = agenda_events
+        events_list = []
+        for ev in agenda_events:
+            events_list.append({
+                "id": ev.id,
+                "title": ev.title,
+                "date": str(ev.date),
+                "time": ev.time,
+                "type": ev.type,
+                "status": ev.status,
+                "publico": bool(ev.publico),
+                "segmento": ev.segmento or "Umbanda",
+                "description": ev.description or ""
+            })
+        context_data["agenda_events_json"] = json.dumps(events_list)
     elif tab == "usuarios":
         if user_role in ["programador", "pai_de_santo"]:
             context_data["all_users"] = db.query(User).order_by(User.id.asc()).all()
@@ -1659,8 +1721,8 @@ async def agenda_add(
     try:
         from app.models import User, AgendaEvent
         current_user = db.query(User).filter(User.id == user_id).first()
-        if not current_user or current_user.role not in ["programador", "pai_de_santo", "secretario", "tesoureiro", "membro"]:
-            request.session["msg_error"] = "Acesso negado para agendar trabalhos."
+        if not current_user or current_user.role not in ["programador", "pai_de_santo", "secretario", "tesoureiro"]:
+            request.session["msg_error"] = "Acesso negado para agendar trabalhos. Apenas administradores e dirigentes têm permissão."
             return RedirectResponse(url="/admin?tab=site", status_code=303)
             
         import datetime
@@ -1700,7 +1762,7 @@ async def agenda_toggle_status(
     try:
         from app.models import User, AgendaEvent
         current_user = db.query(User).filter(User.id == user_id).first()
-        if not current_user or current_user.role not in ["programador", "pai_de_santo", "secretario", "tesoureiro", "membro"]:
+        if not current_user or current_user.role not in ["programador", "pai_de_santo", "secretario", "tesoureiro"]:
             request.session["msg_error"] = "Acesso negado para alterar status de trabalhos."
             return RedirectResponse(url="/admin?tab=site", status_code=303)
             
@@ -1745,7 +1807,7 @@ async def agenda_update(
     try:
         from app.models import User, AgendaEvent
         current_user = db.query(User).filter(User.id == user_id).first()
-        if not current_user or current_user.role not in ["programador", "pai_de_santo", "secretario", "tesoureiro", "membro"]:
+        if not current_user or current_user.role not in ["programador", "pai_de_santo", "secretario", "tesoureiro"]:
             request.session["msg_error"] = "Acesso negado para editar trabalhos da agenda."
             return RedirectResponse(url="/admin?tab=site", status_code=303)
             
@@ -1786,7 +1848,7 @@ async def agenda_delete(
     try:
         from app.models import User, AgendaEvent
         current_user = db.query(User).filter(User.id == user_id).first()
-        if not current_user or current_user.role not in ["programador", "pai_de_santo", "secretario", "tesoureiro", "membro"]:
+        if not current_user or current_user.role not in ["programador", "pai_de_santo", "secretario", "tesoureiro"]:
             request.session["msg_error"] = "Acesso negado para excluir trabalhos da agenda."
             return RedirectResponse(url="/admin?tab=site", status_code=303)
             
@@ -1892,31 +1954,38 @@ async def admin_config_logo(
         if data.startswith(b"<svg") or b"<?xml" in data[:100]:
             mime_type = "image/svg+xml"
 
-        # 1. Save to /tmp/logo.png (always writable in Vercel/Lambda environment)
-        tmp_logo_path = "/tmp/logo.png"
-        try:
-            with open(tmp_logo_path, "wb") as f:
-                f.write(data)
-        except Exception as ex:
-            print(f"Warning: could not write to /tmp/logo.png: {ex}")
+        import base64
+        b64_str = base64.b64encode(data).decode("utf-8")
 
-        # 2. Try saving to static/images/logo.png if filesystem is writable
+        # 1. Update in-memory cache & /tmp/logo.png & static/images/logo.png
         try:
-            static_dir = os.path.join(BASE_DIR, "static/images")
-            os.makedirs(static_dir, exist_ok=True)
-            logo_path = os.path.join(static_dir, "logo.png")
-            with open(logo_path, "wb") as f:
-                f.write(data)
+            from app.main import set_global_logo_cache
+            set_global_logo_cache(data, mime_type)
         except Exception as ex:
-            print(f"Notice: static/images/logo.png read-only (expected on Vercel/serverless): {ex}")
+            print(f"Warning updating logo cache: {ex}")
 
-        # 3. Save to Firestore for permanent persistence across container restarts
+        # 2. Save to SQLite database (ConfiguracaoSistema) for persistent storage
+        try:
+            c_b64 = db.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_b64").first()
+            if not c_b64:
+                db.add(ConfiguracaoSistema(chave="logo_b64", valor=b64_str))
+            else:
+                c_b64.valor = b64_str
+
+            c_mime = db.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_mime").first()
+            if not c_mime:
+                db.add(ConfiguracaoSistema(chave="logo_mime", valor=mime_type))
+            else:
+                c_mime.valor = mime_type
+            db.commit()
+        except Exception as ex:
+            print(f"Warning: could not save logo to SQLite DB: {ex}")
+
+        # 3. Save to Firestore for permanent cloud backup across environments
         try:
             from app.firebase_config import get_firestore_client
             db_fs = get_firestore_client()
             if db_fs:
-                import base64
-                b64_str = base64.b64encode(data).decode("utf-8")
                 db_fs.collection("configuracoes").document("logo_data").set({
                     "logo_b64": b64_str,
                     "mime_type": mime_type,

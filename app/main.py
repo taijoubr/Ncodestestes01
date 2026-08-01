@@ -36,22 +36,67 @@ except Exception as e:
 
 from fastapi.responses import FileResponse, Response
 
-@app.get("/static/images/logo.png")
-async def serve_logo_png():
-    # 1. Check /tmp/logo.png cache
+GLOBAL_LOGO_CACHE = None
+
+def set_global_logo_cache(raw_bytes: bytes, mime_type: str):
+    global GLOBAL_LOGO_CACHE
+    GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": mime_type}
+    tmp_path = "/tmp/logo.png"
+    try:
+        with open(tmp_path, "wb") as f:
+            f.write(raw_bytes)
+    except Exception:
+        pass
+    try:
+        static_dir = os.path.join(BASE_DIR, "static/images")
+        os.makedirs(static_dir, exist_ok=True)
+        with open(os.path.join(static_dir, "logo.png"), "wb") as f:
+            f.write(raw_bytes)
+    except Exception:
+        pass
+
+def get_logo_bytes():
+    global GLOBAL_LOGO_CACHE
+    if GLOBAL_LOGO_CACHE is not None:
+        return GLOBAL_LOGO_CACHE["bytes"], GLOBAL_LOGO_CACHE["mime"]
+
     tmp_path = "/tmp/logo.png"
     if os.path.exists(tmp_path):
-        mime_type = "image/png"
         try:
             with open(tmp_path, "rb") as f:
-                head = f.read(100)
-            if b"<svg" in head or b"<?xml" in head:
-                mime_type = "image/svg+xml"
+                raw_bytes = f.read()
+            if raw_bytes:
+                mime_type = "image/svg+xml" if (b"<svg" in raw_bytes[:100] or b"<?xml" in raw_bytes[:100]) else "image/png"
+                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": mime_type}
+                return raw_bytes, mime_type
         except Exception:
             pass
-        return FileResponse(tmp_path, media_type=mime_type)
 
-    # 2. Check Firestore for persisted logo_data
+    # Check SQLite database
+    try:
+        from app.database import SessionLocal
+        from app.models import ConfiguracaoSistema
+        db = SessionLocal()
+        try:
+            cfg_b64 = db.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_b64").first()
+            cfg_mime = db.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_mime").first()
+            if cfg_b64 and cfg_b64.valor:
+                import base64
+                raw_bytes = base64.b64decode(cfg_b64.valor)
+                mime_type = cfg_mime.valor if cfg_mime and cfg_mime.valor else "image/png"
+                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": mime_type}
+                try:
+                    with open(tmp_path, "wb") as f:
+                        f.write(raw_bytes)
+                except Exception:
+                    pass
+                return raw_bytes, mime_type
+        finally:
+            db.close()
+    except Exception as ex:
+        print(f"Error fetching logo from SQLite: {ex}")
+
+    # Check Firestore
     try:
         from app.firebase_config import get_firestore_client
         db_fs = get_firestore_client()
@@ -64,29 +109,64 @@ async def serve_logo_png():
                 if b64_str:
                     import base64
                     raw_bytes = base64.b64decode(b64_str)
-                    # Cache to /tmp for fast subsequent requests
+                    GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": mime_type}
                     try:
                         with open(tmp_path, "wb") as f:
                             f.write(raw_bytes)
                     except Exception:
                         pass
-                    return Response(content=raw_bytes, media_type=mime_type)
+                    # Sync to SQLite
+                    try:
+                        from app.database import SessionLocal
+                        from app.models import ConfiguracaoSistema
+                        db_sql = SessionLocal()
+                        c_b64 = db_sql.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_b64").first()
+                        if not c_b64:
+                            db_sql.add(ConfiguracaoSistema(chave="logo_b64", valor=b64_str))
+                        else:
+                            c_b64.valor = b64_str
+
+                        c_mime = db_sql.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_mime").first()
+                        if not c_mime:
+                            db_sql.add(ConfiguracaoSistema(chave="logo_mime", valor=mime_type))
+                        else:
+                            c_mime.valor = mime_type
+                        db_sql.commit()
+                        db_sql.close()
+                    except Exception:
+                        pass
+                    return raw_bytes, mime_type
     except Exception as ex:
         print(f"Error serving custom logo from Firestore: {ex}")
 
-    # 3. Fallback to default static file
+    # Fallback to default static file
     path = os.path.join(BASE_DIR, "static/images/logo.png")
     if os.path.exists(path):
-        mime_type = "image/png"
         try:
             with open(path, "rb") as f:
-                head = f.read(100)
-            if b"<svg" in head or b"<?xml" in head:
-                mime_type = "image/svg+xml"
+                raw_bytes = f.read()
+            if raw_bytes:
+                mime_type = "image/svg+xml" if (b"<svg" in raw_bytes[:100] or b"<?xml" in raw_bytes[:100]) else "image/png"
+                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": mime_type}
+                return raw_bytes, mime_type
         except Exception:
             pass
-        return FileResponse(path, media_type=mime_type)
-    return FileResponse(path)
+    return b"", "image/png"
+
+@app.get("/logo.png")
+@app.get("/static/images/logo.png")
+async def serve_logo_png():
+    raw_bytes, mime_type = get_logo_bytes()
+    if raw_bytes:
+        return Response(
+            content=raw_bytes,
+            media_type=mime_type,
+            headers={"Cache-Control": "public, max-age=3600, stale-while-revalidate=86400"}
+        )
+    fallback_path = os.path.join(BASE_DIR, "static/images/logo.png")
+    if os.path.exists(fallback_path):
+        return FileResponse(fallback_path)
+    return Response(status_code=404)
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
@@ -369,7 +449,7 @@ def seed_initial_data():
             print("Seeding initial internal announcement...")
             welcome_internal = QuadroAviso(
                 title="Bem-vindo ao Quadro de Avisos Interno!",
-                content="Este espaço é de uso restrito do corpo mediúnico e administrativo da nossa Casa. Aqui publicamos informações sobre escalas, reuniões administrativas, manutenções do terreiro e comunicados de interesse exclusivo da nossa corrente. Mantenham-se atentos!",
+                content="Este espaço é de uso restrito dos membros e administração da nossa Casa. Aqui publicamos informações sobre escalas, reuniões administrativas, manutenções do terreiro e comunicados de interesse exclusivo da nossa corrente. Mantenham-se atentos!",
                 author_name="programador",
                 date_posted=datetime.date.today(),
                 created_at=datetime.datetime.utcnow()
