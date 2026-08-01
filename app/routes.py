@@ -182,6 +182,25 @@ async def sobre(request: Request):
     )
 
 
+@router.get("/avisos", response_class=HTMLResponse)
+async def avisos_public_page(request: Request, db: Session = Depends(get_db)):
+    try:
+        avisos = db.query(Aviso).filter(Aviso.is_active == True).order_by(Aviso.date_posted.desc()).all()
+        if not avisos:
+            avisos = DEFAULT_AVISOS
+    except Exception:
+        avisos = DEFAULT_AVISOS
+
+    return templates.TemplateResponse(
+        request=request,
+        name="avisos.html",
+        context={
+            "active_page": "avisos",
+            "avisos": avisos
+        }
+    )
+
+
 @router.get("/agenda", response_class=HTMLResponse)
 async def agenda(request: Request, db: Session = Depends(get_db)):
     import json

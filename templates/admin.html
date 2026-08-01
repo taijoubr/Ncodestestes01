@@ -690,41 +690,40 @@
                         </form>
                     </div>
 
-                    <div class="overflow-x-auto">
+                    <div>
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-100 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
                                 <tr>
-                                    <th class="px-4 py-3">Código</th>
-                                    <th class="px-5 py-3">Membro</th>
-                                    <th class="px-4 py-3">Cargo/Função</th>
-                                    <th class="px-4 py-3">Orixá</th>
+                                    <th class="px-4 py-3">Membro</th>
+                                    <th class="px-4 py-3 hidden sm:table-cell">Cargo / Função</th>
                                     <th class="px-4 py-3 text-center">Situação</th>
-                                    <th class="px-4 py-3 text-center">Consulta Privada</th>
-                                    <th class="px-4 py-3 text-center">Mensalidade</th>
-                                    <th class="px-4 py-3 text-center">Ficha Cadastral</th>
-                                    {% if current_user and current_user.role in ['programador', 'pai_de_santo'] %}
-                                    <th class="px-4 py-3 text-center">Ações</th>
-                                    {% endif %}
+                                    <th class="px-4 py-3 text-right">Ações & Detalhes</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 text-slate-700">
                                 {% if membros %}
                                     {% for m in membros %}
-                                    <tr class="hover:bg-slate-50/50 transition-colors">
-                                        <td class="px-4 py-4 whitespace-nowrap font-mono font-bold text-xs text-blue-900">
-                                            {{ m.codigo_membro or 'M0000' }}
+                                    <!-- MAIN MEMBER ROW -->
+                                    <tr onclick="toggleMemberAccordion('membro-accordion-{{ m.id }}', 'membro-chevron-{{ m.id }}')" 
+                                        class="hover:bg-blue-50/40 cursor-pointer transition-colors select-none">
+                                        <td class="px-4 py-3.5">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-800 font-bold text-xs flex items-center justify-center shrink-0 border border-blue-200 shadow-2xs">
+                                                    {{ m.nome[:2] | upper if m.nome else 'MB' }}
+                                                </div>
+                                                <div>
+                                                    <div class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                                        <span>{{ m.nome }}</span>
+                                                        <span class="font-mono text-[10px] font-bold text-blue-900 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">{{ m.codigo_membro or 'M0000' }}</span>
+                                                    </div>
+                                                    <div class="text-xs text-slate-500 sm:hidden mt-0.5">{{ m.cargo or 'Médium' }}</div>
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td class="px-5 py-4">
-                                            <div class="font-semibold text-slate-800">{{ m.nome }}</div>
-                                            <div class="text-[10px] text-slate-400 font-mono">Ingresso: {{ m.data_ingresso | format_date }}</div>
+                                        <td class="px-4 py-3.5 text-xs text-slate-600 font-medium hidden sm:table-cell">
+                                            {{ m.cargo or 'Médium' }}
                                         </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-slate-600">
-                                            <span class="font-medium text-xs">{{ m.cargo or 'Médium' }}</span>
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-xs text-slate-700 font-medium">
-                                            {{ m.orixa_cabeca or '-' }}
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-center">
+                                        <td class="px-4 py-3.5 text-center">
                                             {% if m.situacao == 'Ativo' or (not m.situacao and m.ativo) %}
                                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-700">
                                                     ● Ativo
@@ -739,87 +738,132 @@
                                                 </span>
                                             {% endif %}
                                         </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-xs text-center">
-                                            {% if current_user and current_user.role in ['programador', 'pai_de_santo'] %}
-                                            <form action="/admin/membros/consulta-privada/{{ m.id }}" method="POST" class="inline-flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200">
-                                                <input type="checkbox" name="aprovado" value="true" id="aprovado_{{ m.id }}" 
-                                                    {% if m.aprovado_consulta_privada %}checked{% endif %} class="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
-                                                    onchange="this.form.submit()">
-                                                <label for="aprovado_{{ m.id }}" class="text-[11px] font-bold text-slate-600 uppercase cursor-pointer">Habilitado</label>
-                                                <input type="hidden" name="valor" value="0.00">
-                                            </form>
-                                            {% else %}
-                                                {% if m.aprovado_consulta_privada %}
-                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 border border-blue-200 text-blue-700">
-                                                        Habilitado
-                                                    </span>
-                                                {% else %}
-                                                    <span class="text-[10px] text-slate-400 font-medium">Não Habilitado</span>
-                                                {% endif %}
-                                            {% endif %}
+                                        <td class="px-4 py-3.5 text-right">
+                                            <button type="button" 
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-100 text-slate-700 hover:text-blue-900 font-semibold text-xs border border-slate-200 transition-all">
+                                                <span>Informações</span>
+                                                <svg id="membro-chevron-{{ m.id }}" class="w-4 h-4 transition-transform duration-200 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </button>
                                         </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-xs text-center">
-                                            {% if current_user and current_user.role in ['programador', 'pai_de_santo', 'tesoureiro'] %}
-                                            <form action="/admin/membros/isentar/{{ m.id }}" method="POST" class="inline-flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200">
-                                                <input type="checkbox" name="isento" value="true" id="isento_{{ m.id }}" 
-                                                    {% if m.isento_mensalidade %}checked{% endif %} class="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
-                                                    onchange="this.form.submit()">
-                                                <label for="isento_{{ m.id }}" class="text-[11px] font-bold text-slate-600 uppercase cursor-pointer">Isento</label>
-                                            </form>
-                                            {% else %}
-                                                {% if m.isento_mensalidade %}
-                                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 border border-blue-200 text-blue-700">
-                                                        Isento
-                                                    </span>
-                                                {% else %}
-                                                    <span class="text-[10px] text-slate-500 font-semibold">Regular</span>
-                                                {% endif %}
-                                            {% endif %}
-                                        </td>
-                                        <td class="px-4 py-4 whitespace-nowrap text-center">
-                                            <div class="flex items-center justify-center gap-1.5">
-                                                <!-- Open Full Ficha Cadastral Page -->
-                                                <a href="/admin/membros/ficha/{{ m.id }}" target="_blank"
-                                                    class="text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg border border-blue-200 transition-all inline-flex items-center gap-1.5 text-xs font-semibold shadow-xs"
-                                                    title="Abrir Ficha Cadastral Completa para Visualização, Edição ou Impressão">
-                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                                    Abrir Ficha
-                                                </a>
+                                    </tr>
 
-                                                <!-- Export Excel button for this member -->
-                                                <a href="/admin/membros/export-excel?membro_id={{ m.id }}" 
-                                                    class="text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2 py-1.5 rounded-lg border border-emerald-200 transition-all inline-flex items-center gap-1 text-xs font-semibold"
-                                                    title="Baixar Planilha Excel de {{ m.nome }}">
-                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                                    Excel
-                                                </a>
-                                            </div>
-                                        </td>
-                                        {% if current_user and current_user.role in ['programador', 'pai_de_santo'] %}
-                                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                                            <div class="flex justify-center gap-2">
-                                                <!-- Toggle active form -->
-                                                <form action="/admin/membros/toggle/{{ m.id }}" method="POST" class="inline">
-                                                    <button type="submit" 
-                                                        class="text-xs font-semibold px-2 py-1 rounded-md border transition-all {% if m.ativo %}bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100{% else %}bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100{% endif %}">
-                                                        {% if m.ativo %}Afastar{% else %}Reativar{% endif %}
-                                                    </button>
-                                                </form>
+                                    <!-- EXPANDABLE DETAILS ACCORDION ROW -->
+                                    <tr id="membro-accordion-{{ m.id }}" class="hidden bg-slate-50/90 border-b border-slate-200">
+                                        <td colspan="4" class="p-4 sm:p-6">
+                                            <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
                                                 
-                                                <!-- Delete form -->
-                                                <form action="/admin/membros/delete/{{ m.id }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir o cadastro deste membro definitivamente?');" class="inline">
-                                                    <button type="submit" class="text-rose-600 hover:text-rose-800 p-1 hover:bg-rose-50 rounded-md transition-all">
-                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                                    </button>
-                                                </form>
+                                                <!-- Grid of Member Info -->
+                                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs pb-4 border-b border-slate-100">
+                                                    <div>
+                                                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Código</span>
+                                                        <span class="font-mono font-bold text-blue-900">{{ m.codigo_membro or 'M0000' }}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Cargo / Função</span>
+                                                        <span class="font-medium text-slate-800">{{ m.cargo or 'Médium' }}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Orixá de Cabeça</span>
+                                                        <span class="font-semibold text-slate-700">{{ m.orixa_cabeca or 'Não informado' }}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Data de Ingresso</span>
+                                                        <span class="font-mono text-slate-600">{{ m.data_ingresso | format_date if m.data_ingresso else 'Não informada' }}</span>
+                                                    </div>
+                                                    {% if m.telefone or m.whatsapp %}
+                                                    <div>
+                                                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Telefone / WhatsApp</span>
+                                                        <span class="text-slate-700">{{ m.whatsapp or m.telefone }}</span>
+                                                    </div>
+                                                    {% endif %}
+                                                    {% if m.email %}
+                                                    <div class="col-span-2 sm:col-span-1">
+                                                        <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">E-mail</span>
+                                                        <span class="text-slate-700 truncate block">{{ m.email }}</span>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+
+                                                <!-- Controls & Permissions row -->
+                                                <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
+                                                    <div class="flex flex-wrap items-center gap-3">
+                                                        <!-- Consulta Privada Toggle -->
+                                                        {% if current_user and current_user.role in ['programador', 'pai_de_santo'] %}
+                                                        <form action="/admin/membros/consulta-privada/{{ m.id }}" method="POST" class="inline-flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                                                            <input type="checkbox" name="aprovado" value="true" id="aprovado_{{ m.id }}" 
+                                                                {% if m.aprovado_consulta_privada %}checked{% endif %} class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                                                                onchange="this.form.submit()">
+                                                            <label for="aprovado_{{ m.id }}" class="text-xs font-bold text-slate-700 cursor-pointer">Consulta Privada Habilitada</label>
+                                                            <input type="hidden" name="valor" value="0.00">
+                                                        </form>
+                                                        {% else %}
+                                                            {% if m.aprovado_consulta_privada %}
+                                                                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 border border-blue-200 text-blue-700">
+                                                                    Consulta Privada Habilitada
+                                                                </span>
+                                                            {% endif %}
+                                                        {% endif %}
+
+                                                        <!-- Isento Mensalidade Toggle -->
+                                                        {% if current_user and current_user.role in ['programador', 'pai_de_santo', 'tesoureiro'] %}
+                                                        <form action="/admin/membros/isentar/{{ m.id }}" method="POST" class="inline-flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                                                            <input type="checkbox" name="isento" value="true" id="isento_{{ m.id }}" 
+                                                                {% if m.isento_mensalidade %}checked{% endif %} class="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                                                                onchange="this.form.submit()">
+                                                            <label for="isento_{{ m.id }}" class="text-xs font-bold text-slate-700 cursor-pointer">Isento da Mensalidade</label>
+                                                        </form>
+                                                        {% else %}
+                                                            {% if m.isento_mensalidade %}
+                                                                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 border border-blue-200 text-blue-700">
+                                                                    Isento de Mensalidade
+                                                                </span>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    </div>
+
+                                                    <!-- Action Buttons -->
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <a href="/admin/membros/ficha/{{ m.id }}" target="_blank"
+                                                            class="text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl border border-blue-200 transition-all inline-flex items-center gap-1.5 text-xs font-semibold shadow-2xs"
+                                                            title="Abrir Ficha Cadastral Completa para Visualização, Edição ou Impressão">
+                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                                            Abrir Ficha
+                                                        </a>
+
+                                                        <a href="/admin/membros/export-excel?membro_id={{ m.id }}" 
+                                                            class="text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 transition-all inline-flex items-center gap-1.5 text-xs font-semibold"
+                                                            title="Baixar Planilha Excel de {{ m.nome }}">
+                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                                            Exportar Excel
+                                                        </a>
+
+                                                        {% if current_user and current_user.role in ['programador', 'pai_de_santo'] %}
+                                                        <form action="/admin/membros/toggle/{{ m.id }}" method="POST" class="inline">
+                                                            <button type="submit" 
+                                                                class="text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all {% if m.ativo %}bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100{% else %}bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100{% endif %}">
+                                                                {% if m.ativo %}Afastar Membro{% else %}Reativar Membro{% endif %}
+                                                            </button>
+                                                        </form>
+                                                        
+                                                        <form action="/admin/membros/delete/{{ m.id }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir o cadastro deste membro definitivamente?');" class="inline">
+                                                            <button type="submit" class="text-rose-600 hover:text-rose-800 px-2.5 py-1.5 hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-xl transition-all text-xs font-semibold inline-flex items-center gap-1" title="Excluir Definitivamente">
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                                Excluir
+                                                            </button>
+                                                        </form>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+
                                             </div>
                                         </td>
-                                        {% endif %}
                                     </tr>
                                     {% endfor %}
                                 {% else %}
                                     <tr>
-                                        <td colspan="7" class="px-6 py-12 text-center text-slate-400">
+                                        <td colspan="4" class="px-6 py-12 text-center text-slate-400">
                                             Nenhum membro encontrado com os critérios de busca.
                                         </td>
                                     </tr>
@@ -827,6 +871,22 @@
                             </tbody>
                         </table>
                     </div>
+                    
+                    <script>
+                        function toggleMemberAccordion(rowId, chevronId) {
+                            const row = document.getElementById(rowId);
+                            const chevron = document.getElementById(chevronId);
+                            if (row) {
+                                if (row.classList.contains('hidden')) {
+                                    row.classList.remove('hidden');
+                                    if (chevron) chevron.classList.add('rotate-180');
+                                } else {
+                                    row.classList.add('hidden');
+                                    if (chevron) chevron.classList.remove('rotate-180');
+                                }
+                            }
+                        }
+                    </script>
                 </div>
 
                 <!-- Add Member Form (Takes 1 col) -->
