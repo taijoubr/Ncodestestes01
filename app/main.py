@@ -107,37 +107,52 @@ def get_logo_bytes():
     import base64
     import hashlib
 
-    # 1. Primary Source: static/images/logo.png or logo_b64.json (Updated by admin uploads and repository)
-    path = os.path.join(BASE_DIR, "static/images/logo.png")
-    if os.path.exists(path):
-        try:
-            with open(path, "rb") as f:
-                raw_bytes = f.read()
-            if raw_bytes and len(raw_bytes) > 100:
-                real_mime = detect_image_mime(raw_bytes, "image/png")
-                ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
-                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
-                GLOBAL_LOGO_VERSION = ver_str
-                return raw_bytes, real_mime
-        except Exception as ex:
-            print(f"Error reading static/images/logo.png: {ex}")
+    # 1. Check candidate PNG file paths
+    candidate_png_paths = [
+        "/tmp/logo.png",
+        os.path.join(BASE_DIR, "static/images/logo.png"),
+        os.path.join(os.getcwd(), "static/images/logo.png"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "images", "logo.png"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "images", "logo.png"),
+    ]
 
-    # 2. Check local static/images/logo_b64.json backup
-    try:
-        json_path = os.path.join(BASE_DIR, "static/images/logo_b64.json")
+    for path in candidate_png_paths:
+        if os.path.exists(path):
+            try:
+                with open(path, "rb") as f:
+                    raw_bytes = f.read()
+                if raw_bytes and len(raw_bytes) > 100:
+                    real_mime = detect_image_mime(raw_bytes, "image/png")
+                    ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
+                    GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
+                    GLOBAL_LOGO_VERSION = ver_str
+                    return raw_bytes, real_mime
+            except Exception as ex:
+                print(f"Error reading {path}: {ex}")
+
+    # 2. Check candidate JSON base64 backup paths
+    candidate_json_paths = [
+        os.path.join(BASE_DIR, "static/images/logo_b64.json"),
+        os.path.join(os.getcwd(), "static/images/logo_b64.json"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "images", "logo_b64.json"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "images", "logo_b64.json"),
+    ]
+
+    for json_path in candidate_json_paths:
         if os.path.exists(json_path):
-            import json
-            with open(json_path, "r") as f:
-                data = json.load(f)
-            if data and "b64" in data:
-                raw_bytes = base64.b64decode(data["b64"])
-                real_mime = detect_image_mime(raw_bytes, data.get("mime", "image/png"))
-                ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
-                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
-                GLOBAL_LOGO_VERSION = ver_str
-                return raw_bytes, real_mime
-    except Exception as ex:
-        print(f"Error reading logo_b64.json: {ex}")
+            try:
+                import json
+                with open(json_path, "r") as f:
+                    data = json.load(f)
+                if data and "b64" in data:
+                    raw_bytes = base64.b64decode(data["b64"])
+                    real_mime = detect_image_mime(raw_bytes, data.get("mime", "image/png"))
+                    ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
+                    GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
+                    GLOBAL_LOGO_VERSION = ver_str
+                    return raw_bytes, real_mime
+            except Exception as ex:
+                print(f"Error reading {json_path}: {ex}")
 
     # 3. Check SQLite database
     try:
@@ -160,6 +175,26 @@ def get_logo_bytes():
             db.close()
     except Exception as ex:
         print(f"Error fetching logo from SQLite: {ex}")
+
+    # 4. Check Firestore database
+    try:
+        from app.firebase_config import get_firestore_client
+        db_fs = get_firestore_client()
+        if db_fs:
+            doc = db_fs.collection("configuracoes").document("logo_data").get()
+            if doc.exists:
+                data_dict = doc.to_dict()
+                b64_str = data_dict.get("logo_b64")
+                stored_mime = data_dict.get("mime_type", "image/png")
+                if b64_str:
+                    raw_bytes = base64.b64decode(b64_str)
+                    real_mime = detect_image_mime(raw_bytes, stored_mime)
+                    ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
+                    GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
+                    GLOBAL_LOGO_VERSION = ver_str
+                    return raw_bytes, real_mime
+    except Exception as ex:
+        print(f"Error fetching logo from Firestore: {ex}")
 
     return b"", "image/png"
 
