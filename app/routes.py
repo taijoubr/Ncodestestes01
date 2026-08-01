@@ -417,10 +417,12 @@ async def book_consulta_post(
 # ADMINISTRATIVE BACK-OFFICE OPERATIONS
 # ==========================================================================
 
+from app.auth_utils import get_session_user_id, generate_auth_token, verify_password
+
 @router.get("/admin/login", response_class=HTMLResponse)
 async def admin_login_get(request: Request):
     # If already logged in, redirect to the dashboard
-    if request.session.get("user_id"):
+    if get_session_user_id(request):
         return RedirectResponse(url="/admin", status_code=303)
     return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
 
@@ -433,7 +435,6 @@ async def admin_login_post(
     db: Session = Depends(get_db)
 ):
     from app.models import User
-    from app.auth_utils import verify_password
     
     user = db.query(User).filter(User.username == username).first()
     if not user or not verify_password(password, user.hashed_password):
@@ -457,20 +458,26 @@ async def admin_login_post(
             context={"error": "Sua conta de membro está aguardando aprovação pela administração/Pai de Santo."}
         )
         
+    token = generate_auth_token(user.id)
     request.session["user_id"] = user.id
     request.session["username"] = user.username
-    return RedirectResponse(url="/admin", status_code=303)
+    
+    response = RedirectResponse(url=f"/admin?auth_token={token}", status_code=303)
+    response.set_cookie("oloroke_auth_token", token, max_age=18000, httponly=False)
+    return response
 
 
 @router.get("/admin/logout")
 async def admin_logout(request: Request):
     request.session.clear()
-    return RedirectResponse(url="/admin/login", status_code=303)
+    response = RedirectResponse(url="/admin/login", status_code=303)
+    response.delete_cookie("oloroke_auth_token")
+    return response
 
 
 @router.get("/admin/cadastro_membro", response_class=HTMLResponse)
 async def admin_cadastro_membro_get(request: Request):
-    if request.session.get("user_id"):
+    if get_session_user_id(request):
         return RedirectResponse(url="/admin", status_code=303)
     return templates.TemplateResponse(request=request, name="cadastro_membro.html", context={"success": False, "error": None, "form_data": None})
 
@@ -562,7 +569,7 @@ async def admin_membro_approve(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
 
@@ -609,7 +616,7 @@ async def admin_membro_reject(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
 
@@ -643,7 +650,7 @@ async def admin_dashboard(
     search: str = "",
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -878,7 +885,7 @@ async def financeiro_add(
     data: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -915,7 +922,7 @@ async def financeiro_delete(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -953,7 +960,7 @@ async def mensalidades_save(
     observacao: str = Form(None),
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1047,7 +1054,7 @@ async def update_membro_mensalidade(
     valor_mensalidade: float = Form(...),
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1091,7 +1098,7 @@ async def membros_add(
     valor_mensalidade: float = Form(50.0),
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1132,7 +1139,7 @@ async def membros_toggle(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1164,7 +1171,7 @@ async def membros_consulta_privada(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1201,7 +1208,7 @@ async def membros_isentar(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1238,7 +1245,7 @@ async def membros_delete(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1270,7 +1277,7 @@ async def export_membros_excel(
     membro_id: int = None,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1439,7 +1446,7 @@ async def avisos_add(
     pub_internal: str = Form(None),
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1495,7 +1502,7 @@ async def avisos_toggle_status(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1527,7 +1534,7 @@ async def avisos_delete(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1566,7 +1573,7 @@ async def agenda_add(
     segmento: str = Form("Umbanda"),
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1607,7 +1614,7 @@ async def agenda_toggle_status(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1652,7 +1659,7 @@ async def agenda_update(
     segmento: str = Form("Umbanda"),
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1693,7 +1700,7 @@ async def agenda_delete(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1728,7 +1735,7 @@ async def admin_user_update(
     confirm_password: str = Form(None),
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1773,7 +1780,7 @@ async def admin_config_logo(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1817,7 +1824,7 @@ async def admin_config_porcentagem(
     porcentagem_casa: float = Form(...),
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1856,7 +1863,7 @@ async def admin_user_add(
     confirm_password: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1908,7 +1915,7 @@ async def admin_user_edit(
     confirm_password: str = Form(None),
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -1962,7 +1969,7 @@ async def admin_user_delete(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -2012,7 +2019,7 @@ async def quadro_avisos_add(
     pub_internal: str = Form(None),
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -2077,7 +2084,7 @@ async def quadro_avisos_delete(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -2116,7 +2123,7 @@ async def admin_consultas_confirm(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -2165,7 +2172,7 @@ async def admin_consultas_complete(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -2229,7 +2236,7 @@ async def admin_consultas_cancel(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         
@@ -2272,7 +2279,7 @@ async def admin_consultas_delete(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    user_id = request.session.get("user_id")
+    user_id = get_session_user_id(request)
     if not user_id:
         return RedirectResponse(url="/admin/login", status_code=303)
         

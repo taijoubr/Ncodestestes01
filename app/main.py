@@ -19,8 +19,8 @@ app.add_middleware(
     secret_key="Oloroke_Admin_Secret_Key_2026_Secure!",
     session_cookie="oloroke_admin_session",
     max_age=18000, # 5 hours session lifetime
-    same_site="none",
-    https_only=True,
+    same_site="lax",
+    https_only=False,
 )
 
 # Mount static files (images, css, icons)

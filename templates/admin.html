@@ -2595,6 +2595,38 @@
             document.getElementById('membro-ficha-modal').classList.add('hidden');
             document.body.style.overflow = '';
         }
+
+        // Automatic iframe & cookie session token preservation
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let token = urlParams.get('auth_token');
+            if (token) {
+                sessionStorage.setItem('oloroke_auth_token', token);
+            } else {
+                token = sessionStorage.getItem('oloroke_auth_token');
+            }
+
+            if (token) {
+                // Attach hidden token input to forms
+                document.querySelectorAll('form').forEach(form => {
+                    if (!form.querySelector('input[name="auth_token"]')) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'auth_token';
+                        input.value = token;
+                        form.appendChild(input);
+                    }
+                });
+
+                // Attach token to internal links
+                document.querySelectorAll('a[href^="/admin"]').forEach(a => {
+                    if (!a.href.includes('auth_token=')) {
+                        const separator = a.href.includes('?') ? '&' : '?';
+                        a.href = a.href + separator + 'auth_token=' + token;
+                    }
+                });
+            }
+        })();
     </script>
 
     <!-- Modal Ficha de Cadastro do Membro -->

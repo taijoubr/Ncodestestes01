@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "python3 -m uvicorn app.main:app --port=3000 --host=0.0.0.0 --reload",
+    "dev": "python3 -m uvicorn app.main:app --port=3000 --host=0.0.0.0 --reload --proxy-headers --forwarded-allow-ips='*'",
     "build": "mkdir -p dist && echo 'No static build step needed for Python FastAPI'",
-    "start": "python3 -m uvicorn app.main:app --port=3000 --host=0.0.0.0"
+    "start": "python3 -m uvicorn app.main:app --port=3000 --host=0.0.0.0 --proxy-headers --forwarded-allow-ips='*'"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

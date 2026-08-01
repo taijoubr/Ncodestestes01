@@ -1,5 +1,48 @@
 import hashlib
 import os
+from fastapi import Request
+from itsdangerous import TimestampSigner, BadSignature, SignatureExpired
+
+SECRET_KEY = "Oloroke_Admin_Secret_Key_2026_Secure!"
+signer = TimestampSigner(SECRET_KEY)
+
+def generate_auth_token(user_id: int) -> str:
+    """Generates a signed auth token for iframe & multi-tab persistence."""
+    return signer.sign(str(user_id)).decode("utf-8")
+
+def verify_auth_token(token: str, max_age: int = 86400) -> int | None:
+    """Verifies a signed auth token."""
+    if not token:
+        return None
+    try:
+        unsigned = signer.unsign(token, max_age=max_age)
+        return int(unsigned.decode("utf-8"))
+    except Exception:
+        return None
+
+def get_session_user_id(request: Request) -> int | None:
+    """
+    Retrieves user_id from session cookie or auth_token query parameter / header / cookie.
+    Ensures seamless login in both browser top-level tabs and sandboxed iframe previews.
+    """
+    # 1. Standard session cookie
+    user_id = request.session.get("user_id")
+    if user_id:
+        return user_id
+
+    # 2. Fallback to auth_token query param, header, or custom cookie
+    token = (
+        request.query_params.get("auth_token") 
+        or request.headers.get("X-Auth-Token") 
+        or request.cookies.get("oloroke_auth_token")
+    )
+    if token:
+        uid = verify_auth_token(token)
+        if uid:
+            request.session["user_id"] = uid
+            return uid
+            
+    return None
 
 def hash_password(password: str) -> str:
     """
@@ -37,3 +80,4 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return test_key == stored_key
     except Exception:
         return False
+
