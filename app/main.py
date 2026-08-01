@@ -107,75 +107,22 @@ def get_logo_bytes():
     import base64
     import hashlib
 
-    # 1. Check SQLite database FIRST (Source of truth for user config)
-    try:
-        from app.database import SessionLocal
-        from app.models import ConfiguracaoSistema
-        db = SessionLocal()
+    # 1. Primary Source: static/images/logo.png or logo_b64.json (Updated by admin uploads and repository)
+    path = os.path.join(BASE_DIR, "static/images/logo.png")
+    if os.path.exists(path):
         try:
-            cfg_b64 = db.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_b64").first()
-            cfg_mime = db.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_mime").first()
-            if cfg_b64 and cfg_b64.valor:
-                raw_bytes = base64.b64decode(cfg_b64.valor)
-                stored_mime = cfg_mime.valor if cfg_mime and cfg_mime.valor else "image/png"
-                real_mime = detect_image_mime(raw_bytes, stored_mime)
+            with open(path, "rb") as f:
+                raw_bytes = f.read()
+            if raw_bytes and len(raw_bytes) > 100:
+                real_mime = detect_image_mime(raw_bytes, "image/png")
                 ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
-                
                 GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
                 GLOBAL_LOGO_VERSION = ver_str
-                
-                try:
-                    with open("/tmp/logo.png", "wb") as f:
-                        f.write(raw_bytes)
-                except Exception:
-                    pass
                 return raw_bytes, real_mime
-        finally:
-            db.close()
-    except Exception as ex:
-        print(f"Error fetching logo from SQLite: {ex}")
+        except Exception as ex:
+            print(f"Error reading static/images/logo.png: {ex}")
 
-    # 2. Check Firestore
-    try:
-        from app.firebase_config import get_firestore_client
-        db_fs = get_firestore_client()
-        if db_fs:
-            doc = db_fs.collection("configuracoes").document("logo_data").get()
-            if doc.exists:
-                data_dict = doc.to_dict()
-                b64_str = data_dict.get("logo_b64")
-                stored_mime = data_dict.get("mime_type", "image/png")
-                if b64_str:
-                    raw_bytes = base64.b64decode(b64_str)
-                    real_mime = detect_image_mime(raw_bytes, stored_mime)
-                    ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
-                    GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
-                    GLOBAL_LOGO_VERSION = ver_str
-                    
-                    # Sync to SQLite
-                    try:
-                        from app.database import SessionLocal
-                        from app.models import ConfiguracaoSistema
-                        db_sql = SessionLocal()
-                        c_b64 = db_sql.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_b64").first()
-                        if not c_b64:
-                            db_sql.add(ConfiguracaoSistema(chave="logo_b64", valor=b64_str))
-                        else:
-                            c_b64.valor = b64_str
-                        c_mime = db_sql.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_mime").first()
-                        if not c_mime:
-                            db_sql.add(ConfiguracaoSistema(chave="logo_mime", valor=real_mime))
-                        else:
-                            c_mime.valor = real_mime
-                        db_sql.commit()
-                        db_sql.close()
-                    except Exception:
-                        pass
-                    return raw_bytes, real_mime
-    except Exception as ex:
-        print(f"Error serving custom logo from Firestore: {ex}")
-
-    # 3. Check local static/images/logo_b64.json file backup
+    # 2. Check local static/images/logo_b64.json backup
     try:
         json_path = os.path.join(BASE_DIR, "static/images/logo_b64.json")
         if os.path.exists(json_path):
@@ -192,35 +139,27 @@ def get_logo_bytes():
     except Exception as ex:
         print(f"Error reading logo_b64.json: {ex}")
 
-    # 4. Check /tmp/logo.png
-    tmp_path = "/tmp/logo.png"
-    if os.path.exists(tmp_path):
+    # 3. Check SQLite database
+    try:
+        from app.database import SessionLocal
+        from app.models import ConfiguracaoSistema
+        db = SessionLocal()
         try:
-            with open(tmp_path, "rb") as f:
-                raw_bytes = f.read()
-            if raw_bytes:
-                real_mime = detect_image_mime(raw_bytes, "image/png")
+            cfg_b64 = db.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_b64").first()
+            cfg_mime = db.query(ConfiguracaoSistema).filter(ConfiguracaoSistema.chave == "logo_mime").first()
+            if cfg_b64 and cfg_b64.valor:
+                raw_bytes = base64.b64decode(cfg_b64.valor)
+                stored_mime = cfg_mime.valor if cfg_mime and cfg_mime.valor else "image/png"
+                real_mime = detect_image_mime(raw_bytes, stored_mime)
                 ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
+                
                 GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
                 GLOBAL_LOGO_VERSION = ver_str
                 return raw_bytes, real_mime
-        except Exception:
-            pass
-
-    # 5. Fallback to default static file static/images/logo.png
-    path = os.path.join(BASE_DIR, "static/images/logo.png")
-    if os.path.exists(path):
-        try:
-            with open(path, "rb") as f:
-                raw_bytes = f.read()
-            if raw_bytes:
-                real_mime = detect_image_mime(raw_bytes, "image/png")
-                ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
-                GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
-                GLOBAL_LOGO_VERSION = ver_str
-                return raw_bytes, real_mime
-        except Exception:
-            pass
+        finally:
+            db.close()
+    except Exception as ex:
+        print(f"Error fetching logo from SQLite: {ex}")
 
     return b"", "image/png"
 
