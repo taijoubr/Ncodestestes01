@@ -147,7 +147,7 @@ class ConfiguracaoSistema(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     chave = Column(String(100), unique=True, index=True, nullable=False)
-    valor = Column(String(255), nullable=False)
+    valor = Column(Text, nullable=False)
 
 
 

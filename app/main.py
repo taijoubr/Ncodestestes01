@@ -161,7 +161,7 @@ async def serve_logo_png():
         return Response(
             content=raw_bytes,
             media_type=mime_type,
-            headers={"Cache-Control": "public, max-age=3600, stale-while-revalidate=86400"}
+            headers={"Cache-Control": "no-cache, must-revalidate"}
         )
     fallback_path = os.path.join(BASE_DIR, "static/images/logo.png")
     if os.path.exists(fallback_path):
