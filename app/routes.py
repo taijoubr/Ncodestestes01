@@ -1,5 +1,5 @@
 import datetime
-from fastapi import APIRouter, Request, Depends, Form
+from fastapi import APIRouter, Request, Depends, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -1849,6 +1849,7 @@ async def admin_user_update(
 @router.post("/admin/config/logo")
 async def admin_config_logo(
     request: Request,
+    logo: UploadFile = File(None),
     db: Session = Depends(get_db)
 ):
     user_id = get_session_user_id(request)
@@ -1856,7 +1857,6 @@ async def admin_config_logo(
         return RedirectResponse(url="/admin/login", status_code=303)
         
     try:
-        from fastapi import UploadFile, File
         from app.models import User
         
         user = db.query(User).filter(User.id == user_id).first()
@@ -1864,22 +1864,30 @@ async def admin_config_logo(
             request.session["msg_error"] = "Você não tem permissão para alterar as configurações do terreiro."
             return RedirectResponse(url="/admin?tab=configuracoes", status_code=303)
             
-        # Get form data using fastapi request form
-        form = await request.form()
-        logo_file = form.get("logo")
-        
-        if not logo_file or not isinstance(logo_file, UploadFile) or not logo_file.filename:
-            request.session["msg_error"] = "Nenhum arquivo enviado ou arquivo inválido."
+        logo_file = logo
+        if not logo_file or not hasattr(logo_file, "filename") or not logo_file.filename:
+            form = await request.form()
+            f = form.get("logo")
+            if f and hasattr(f, "filename") and f.filename:
+                logo_file = f
+
+        if not logo_file or not hasattr(logo_file, "filename") or not logo_file.filename:
+            request.session["msg_error"] = "Nenhum arquivo enviado ou arquivo inválido. Por favor selecione uma imagem."
             return RedirectResponse(url="/admin?tab=configuracoes", status_code=303)
             
         # Create folder if it doesn't exist
-        os.makedirs("static/images", exist_ok=True)
+        os.makedirs(os.path.join(BASE_DIR, "static/images"), exist_ok=True)
         
         # Read file data
         data = await logo_file.read()
         
+        if not data:
+            request.session["msg_error"] = "O arquivo enviado está vazio."
+            return RedirectResponse(url="/admin?tab=configuracoes", status_code=303)
+            
         # Save as logo.png
-        with open("static/images/logo.png", "wb") as f:
+        logo_path = os.path.join(BASE_DIR, "static/images/logo.png")
+        with open(logo_path, "wb") as f:
             f.write(data)
             
         request.session["msg_success"] = "Logotipo do terreiro atualizado com sucesso!"
