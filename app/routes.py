@@ -21,7 +21,15 @@ def _get_logo_ver():
     except Exception:
         return 1
 
+def _get_logo_uri():
+    try:
+        from app.main import get_logo_data_uri
+        return get_logo_data_uri()
+    except Exception:
+        return "/static/images/logo.png"
+
 templates.env.globals["get_logo_version"] = _get_logo_ver
+templates.env.globals["get_logo_data_uri"] = _get_logo_uri
 
 # Custom template filters for Portuguese date formatting
 PT_MONTHS = {

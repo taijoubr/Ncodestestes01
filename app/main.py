@@ -196,7 +196,34 @@ def get_logo_bytes():
     except Exception as ex:
         print(f"Error fetching logo from Firestore: {ex}")
 
+    # 5. Guaranteed Python embedded fallback (Always present in code memory)
+    try:
+        from app.embedded_logo import EMBEDDED_LOGO_B64, EMBEDDED_LOGO_MIME
+        if EMBEDDED_LOGO_B64:
+            raw_bytes = base64.b64decode(EMBEDDED_LOGO_B64)
+            real_mime = detect_image_mime(raw_bytes, EMBEDDED_LOGO_MIME)
+            ver_str = hashlib.md5(raw_bytes).hexdigest()[:10]
+            GLOBAL_LOGO_CACHE = {"bytes": raw_bytes, "mime": real_mime, "version": ver_str}
+            GLOBAL_LOGO_VERSION = ver_str
+            return raw_bytes, real_mime
+    except Exception as ex:
+        print(f"Error loading embedded logo fallback: {ex}")
+
     return b"", "image/png"
+
+def get_logo_data_uri() -> str:
+    raw_bytes, mime_type = get_logo_bytes()
+    if raw_bytes and len(raw_bytes) > 0:
+        import base64
+        b64_str = base64.b64encode(raw_bytes).decode("utf-8")
+        return f"data:{mime_type};base64,{b64_str}"
+    try:
+        from app.embedded_logo import EMBEDDED_LOGO_B64, EMBEDDED_LOGO_MIME
+        if EMBEDDED_LOGO_B64:
+            return f"data:{EMBEDDED_LOGO_MIME};base64,{EMBEDDED_LOGO_B64}"
+    except Exception:
+        pass
+    return "/static/images/logo.png"
 
 @app.get("/logo.png")
 @app.get("/static/images/logo.png")

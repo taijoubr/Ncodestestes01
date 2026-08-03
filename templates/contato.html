@@ -8,68 +8,22 @@
     <div class="page-header-container">
         <span class="page-tag">Fale Conosco</span>
         <h1 class="page-title">Canais de Contato</h1>
-        <p class="page-subtitle">Dúvidas, sugestões, apoios a campanhas solidárias ou pedidos de vibrações de cura. Entre em contato por nossos canais.</p>
+        <p class="page-subtitle">Entre em contato por nossos canais oficiais de comunicação ou venha nos visitar em nossas giras.</p>
     </div>
 </section>
 
-<!-- Contact Split Layout -->
+<!-- Contact Info & Map Section -->
 <section id="contato-secao" class="section bg-white">
-    <div class="container">
-        <!-- Success Message Alert Box (Jinja2) -->
-        {% if success_message %}
-        <div class="alert alert-success animate-fade-in" id="contact-success-alert">
-            <svg class="icon-svg alert-icon" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-            <div class="alert-content">
-                <strong>Mensagem Enviada!</strong>
-                <p>{{ success_message }}</p>
-            </div>
-        </div>
-        {% endif %}
+    <div class="container max-w-5xl mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start" id="contato-infos">
+            <!-- Contact Info Cards -->
+            <div class="space-y-6">
+                <div>
+                    <h2 class="col-section-title">Informações de Atendimento</h2>
+                    <p class="col-section-subtitle">Conheça nossos canais oficiais de comunicação direta e venha participar de nossas giras fraternas.</p>
+                </div>
 
-        <div class="split-layout" id="contact-split">
-            <!-- Form Column -->
-            <div class="split-col-left" id="contato-formulario">
-                <h2 class="col-section-title">Escreva uma Mensagem</h2>
-                <p class="col-section-subtitle">Preencha o formulário abaixo e retornaremos assim que possível. Todos os campos são de preenchimento obrigatório.</p>
-                
-                <form action="/contato" method="POST" class="contact-form">
-                    <div class="form-group">
-                        <label for="nome">Seu Nome Completo</label>
-                        <input type="text" id="nome" name="nome" placeholder="Ex: Maria de Souza" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="email">Seu Endereço de E-mail</label>
-                        <input type="email" id="email" name="email" placeholder="Ex: maria@exemplo.com" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="assunto">Assunto do Contato</label>
-                        <select id="assunto" name="assunto" required>
-                            <option value="" disabled selected>Selecione um assunto...</option>
-                            <option value="Dúvidas Gerais">Dúvidas Gerais sobre a Casa</option>
-                            <option value="Atendimento Fraterno">Informações sobre Atendimento Fraterno</option>
-                            <option value="Estudos e Mediunidade">Estudos Doutrinários e Mediunidade</option>
-                            <option value="Doações e Ações Sociais">Doações, Parcerias e Campanhas Solidárias</option>
-                            <option value="Outros">Outros Assuntos</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="mensagem">Sua Mensagem</label>
-                        <textarea id="mensagem" name="mensagem" rows="6" placeholder="Escreva aqui detalhadamente a sua mensagem ou pedido..." required></textarea>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary btn-submit w-full">Enviar Mensagem</button>
-                </form>
-            </div>
-
-            <!-- Contact Information Info Box -->
-            <div class="split-col-right" id="contato-infos">
-                <h2 class="col-section-title">Informações de Atendimento</h2>
-                <p class="col-section-subtitle">Veja como chegar e conheça nossos outros canais de comunicação direta.</p>
-
-                <div class="contact-cards-container">
+                <div class="contact-cards-container space-y-4">
                     <!-- WhatsApp Direct Call -->
                     <div class="contact-info-card">
                         <div class="card-icon-wrapper">
@@ -106,24 +60,24 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Styled Google Maps Embed Map -->
-                <div class="map-placeholder-box">
-                    <div class="map-header">
-                        <span class="pulse-indicator"></span>
-                        <h4>Mapa de Localização</h4>
-                    </div>
-                    <div class="map-graphic-wrapper">
-                        <iframe 
-                            src="https://maps.google.com/maps?q=Rua%20Gon%C3%A7alo%20Ibanhez%20922,%20Birigui%20SP&t=&z=16&ie=UTF8&iwloc=&output=embed" 
-                            width="100%" 
-                            height="320" 
-                            style="border:0; display:block; border-radius: 4px;" 
-                            allowfullscreen="" 
-                            loading="lazy" 
-                            referrerpolicy="no-referrer-when-downgrade">
-                        </iframe>
-                    </div>
+            <!-- Google Map -->
+            <div class="map-placeholder-box">
+                <div class="map-header">
+                    <span class="pulse-indicator"></span>
+                    <h4>Mapa de Localização</h4>
+                </div>
+                <div class="map-graphic-wrapper">
+                    <iframe 
+                        src="https://maps.google.com/maps?q=Rua%20Gon%C3%A7alo%20Ibanhez%20922,%20Birigui%20SP&t=&z=16&ie=UTF8&iwloc=&output=embed" 
+                        width="100%" 
+                        height="380" 
+                        style="border:0; display:block; border-radius: 6px;" 
+                        allowfullscreen="" 
+                        loading="lazy" 
+                        referrerpolicy="no-referrer-when-downgrade">
+                    </iframe>
                 </div>
             </div>
         </div>
