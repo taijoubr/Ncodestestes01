@@ -373,13 +373,13 @@ def seed_initial_data():
                     db.rollback()
 
         # 1. Seed admin user if not exists, and ensure correct password
-        has_admin = db.query(User).filter(User.is_admin == True).first()
-        if not has_admin:
-            print("Creating default admin user...")
+        admin_user = db.query(User).filter((User.username == "ncodes") | (User.username == "programador")).first()
+        if not admin_user:
+            print("Creating default admin user (ncodes)...")
             hashed = hash_password("taijou123")
             admin_user = User(
-                username="programador",
-                email="programador@olorokebirigui.org",
+                username="ncodes",
+                email="ncodes@gmail.com",
                 hashed_password=hashed,
                 is_active=True,
                 is_admin=True,
@@ -387,17 +387,20 @@ def seed_initial_data():
             )
             db.add(admin_user)
             db.commit()
-            print("Admin user created successfully! (Username: programador, Password: taijou123)")
+            print("Admin user created successfully! (Username: ncodes, Password: taijou123)")
         else:
-            # Ensure existing admins have a role assigned
-            admins = db.query(User).filter(User.is_admin == True).all()
-            for adm in admins:
-                if adm.username == "programador":
-                    adm.role = "programador"
-                elif adm.username == "admin":
-                    adm.role = "programador"
-                elif not adm.role:
-                    adm.role = "secretario"
+            if admin_user.username in ["programador", "admin"]:
+                admin_user.username = "ncodes"
+            admin_user.role = "programador"
+            admin_user.is_admin = True
+            db.commit()
+
+        # Update any leftover user with username programador to ncodes
+        old_progs = db.query(User).filter(User.username == "programador").all()
+        for p in old_progs:
+            p.username = "ncodes"
+            p.role = "programador"
+        if old_progs:
             db.commit()
 
         # Ensure 'Ricardo' user exists as pai_de_santo
@@ -526,7 +529,7 @@ def seed_initial_data():
             welcome_internal = QuadroAviso(
                 title="Bem-vindo ao Quadro de Avisos Interno!",
                 content="Este espaço é de uso restrito dos membros e administração da nossa Casa. Aqui publicamos informações sobre escalas, reuniões administrativas, manutenções do terreiro e comunicados de interesse exclusivo da nossa corrente. Mantenham-se atentos!",
-                author_name="programador",
+                author_name="ncodes",
                 date_posted=datetime.date.today(),
                 created_at=datetime.datetime.utcnow()
             )

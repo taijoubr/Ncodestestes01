@@ -2199,8 +2199,8 @@ async def admin_config_logo(
         from app.models import User
         
         user = db.query(User).filter(User.id == user_id).first()
-        if not user or (user.role == "membro" and not user.is_admin):
-            request.session["msg_error"] = "Você não tem permissão para alterar as configurações do terreiro."
+        if not user or user.role != "programador":
+            request.session["msg_error"] = "Apenas o usuário com o perfil de Programador tem permissão para alterar o logotipo do terreiro."
             return RedirectResponse(url="/admin?tab=configuracoes", status_code=303)
             
         data = None
