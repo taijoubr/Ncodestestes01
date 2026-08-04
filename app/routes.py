@@ -2199,7 +2199,7 @@ async def admin_config_logo(
         from app.models import User
         
         user = db.query(User).filter(User.id == user_id).first()
-        if not user or user.role not in ["programador", "pai_de_santo"]:
+        if not user or (user.role == "membro" and not user.is_admin):
             request.session["msg_error"] = "Você não tem permissão para alterar as configurações do terreiro."
             return RedirectResponse(url="/admin?tab=configuracoes", status_code=303)
             
@@ -2267,6 +2267,17 @@ async def admin_config_logo(
                 })
         except Exception as ex:
             print(f"Warning: could not save logo to Firestore: {ex}")
+
+        # 4. Save to embedded_logo.py for code-level fallback persistence
+        try:
+            import os
+            emb_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "embedded_logo.py")
+            with open(emb_file, "w") as ef:
+                ef.write('# Auto-generated embedded fallback logo base64 string\n')
+                ef.write(f'EMBEDDED_LOGO_B64 = "{b64_str}"\n')
+                ef.write(f'EMBEDDED_LOGO_MIME = "{mime_type}"\n')
+        except Exception as ex_emb:
+            print(f"Notice updating embedded_logo.py: {ex_emb}")
 
         request.session["msg_success"] = "Logotipo do terreiro atualizado com sucesso!"
     except Exception as e:
