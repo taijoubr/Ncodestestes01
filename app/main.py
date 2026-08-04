@@ -219,14 +219,14 @@ def get_logo_data_uri() -> str:
 @app.get("/static/images/logo.png")
 async def serve_logo_png():
     raw_bytes, mime_type = get_logo_bytes()
+    ver_str = get_logo_version()
     if raw_bytes:
         return Response(
             content=raw_bytes,
             media_type=mime_type,
             headers={
-                "Cache-Control": "no-cache, no-store, must-revalidate",
-                "Pragma": "no-cache",
-                "Expires": "0"
+                "Cache-Control": "public, max-age=31536000, immutable",
+                "ETag": f'"{ver_str}"'
             }
         )
     fallback_path = os.path.join(BASE_DIR, "static/images/logo.png")
@@ -238,7 +238,7 @@ async def serve_logo_png():
             return Response(
                 content=fb_bytes,
                 media_type=fb_mime,
-                headers={"Cache-Control": "no-cache, must-revalidate"}
+                headers={"Cache-Control": "public, max-age=86400"}
             )
         except Exception:
             return FileResponse(fallback_path)

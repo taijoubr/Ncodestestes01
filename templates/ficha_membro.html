@@ -108,7 +108,7 @@
         <!-- HEADER DA FICHA -->
         <div class="bg-[#0B1F3A] text-white p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div class="flex items-center gap-4">
-                <img src="{{ get_logo_data_uri() if get_logo_data_uri is defined else '/static/images/logo.png' }}" alt="Logo Oloroke Birigui" class="w-14 h-14 rounded-full object-cover border-2 border-amber-400 shrink-0" onerror="this.onerror=null; this.src='/static/images/logo.png';" />
+                <img src="/logo.png?v={{ get_logo_version() if get_logo_version is defined else '1' }}" alt="Logo Oloroke Birigui" class="w-14 h-14 rounded-full object-cover border-2 border-amber-400 shrink-0" onerror="this.onerror=null; this.src='/static/images/logo.png';" />
                 <div>
                     <span class="text-xs uppercase font-bold tracking-widest text-amber-400 block">Terreiro de Axé</span>
                     <h1 class="text-2xl sm:text-3xl font-bold font-serif text-white">Oloroke Birigui</h1>
